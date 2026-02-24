@@ -16,5 +16,6 @@
     { "path": "./packages/ai" },
     { "path": "./packages/mcp-servers" }
   ],
+  "files": [],
   "exclude": ["node_modules"]
 }
