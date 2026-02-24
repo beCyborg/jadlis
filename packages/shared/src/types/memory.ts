@@ -39,6 +39,7 @@ export interface EnergyLeak {
   severity: number;
   status: "active" | "resolved";
   resolution: string | null;
+  created_at: Date;
 }
 
 export interface BotSession {
