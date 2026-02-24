@@ -219,7 +219,8 @@ async function withRetry<T>(
 
       // Only retry on 5xx or network errors
       if (attempt < maxRetries && (err?.status >= 500 || !err?.status)) {
-        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        const jitter = Math.random() * 500;
+        const delay = Math.pow(2, attempt) * 1000 + jitter;
         await new Promise((r) => setTimeout(r, delay));
         continue;
       }
@@ -253,9 +254,9 @@ export async function createMessage(
     );
 
     const textBlock = response.content.find(
-      (b: any) => b.type === "text",
+      (b) => b.type === "text",
     );
-    return textBlock ? (textBlock as any).text : FALLBACK_MESSAGE;
+    return textBlock?.type === "text" ? textBlock.text : FALLBACK_MESSAGE;
   } catch (err: any) {
     console.error("[jadlis:claude] API error:", err?.status, err?.message);
     return FALLBACK_MESSAGE;
@@ -284,10 +285,10 @@ export async function classifyIntent(
     );
 
     const toolUse = response.content.find(
-      (b: any) => b.type === "tool_use",
+      (b) => b.type === "tool_use",
     );
-    if (toolUse && toolUse.type === "tool_use") {
-      const input = (toolUse as any).input as ClassifiedIntent;
+    if (toolUse?.type === "tool_use") {
+      const input = toolUse.input as ClassifiedIntent;
       return {
         intent: input.intent,
         urgency: input.urgency,

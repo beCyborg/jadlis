@@ -41,9 +41,9 @@ function calcWeightedStdDev(
   totalWeight: number,
 ): number {
   const variance =
-    inputs.reduce((sum, i) => sum + i.weight * (i.value - mean) ** 2, 0) /
+    inputs.reduce((sum, i) => sum + Math.abs(i.weight) * (i.value - mean) ** 2, 0) /
     totalWeight;
-  return Math.sqrt(variance);
+  return Math.sqrt(Math.max(0, variance));
 }
 
 function calcFloorPenalty(values: number[], threshold = 20): number {

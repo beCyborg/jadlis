@@ -80,7 +80,11 @@ export function _resetClients(): void {
 // ============================================================
 
 function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+  // Кириллица: ~2 символа на токен, латиница: ~4 символа на токен
+  const cyrillicCount = (text.match(/[\u0400-\u04FF]/g) ?? []).length;
+  const cyrillicRatio = text.length > 0 ? cyrillicCount / text.length : 0;
+  const charsPerToken = cyrillicRatio > 0.3 ? 2 : 4;
+  return Math.ceil(text.length / charsPerToken);
 }
 
 // ============================================================
@@ -347,7 +351,11 @@ export async function indexChunks(
 
   const supabase = getSupabase();
 
-  // Delete existing records for idempotent re-indexing
+  // Embed FIRST — if Voyage fails, existing data stays intact
+  const texts = chunks.map((c) => c.content);
+  const embeddings = await embedBatch(texts, { inputType: "document" });
+
+  // Delete existing records for idempotent re-indexing (after successful embed)
   const { error: deleteError } = await supabase
     .from("jadlis_documents")
     .delete()
@@ -359,10 +367,6 @@ export async function indexChunks(
       `Failed to delete existing chunks: ${deleteError.message}`,
     );
   }
-
-  // Embed all chunks
-  const texts = chunks.map((c) => c.content);
-  const embeddings = await embedBatch(texts, { inputType: "document" });
 
   // Insert rows — pass embedding as number[] (Supabase handles pgvector conversion)
   const rows = chunks.map((chunk, i) => ({

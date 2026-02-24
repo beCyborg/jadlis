@@ -60,7 +60,7 @@ export function createSessionMiddleware(supabase: SupabaseClient) {
       working_memory_updated_at: null,
       message_count: 0,
     }),
-    getSessionKey: (ctx) => String(ctx.chat?.id),
+    getSessionKey: (ctx) => ctx.chat?.id != null ? String(ctx.chat.id) : undefined,
     storage: new SupabaseSessionAdapter(supabase),
   });
 }

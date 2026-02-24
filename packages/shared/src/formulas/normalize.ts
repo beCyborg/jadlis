@@ -27,13 +27,16 @@ export function normalizeMetric(value: number, config: ScaleConfig): number {
       return clamp(((config.max - value) / range) * 100);
     }
     case "P3": {
-      const maxDeviation = Math.max(
-        config.target - config.min,
-        config.max - config.target,
-      );
-      if (maxDeviation === 0) return 100;
-      const deviation = Math.abs(value - config.target);
-      return clamp((1 - deviation / maxDeviation) * 100);
+      if (value === config.target) return 100;
+      if (value < config.target) {
+        const range = config.target - config.min;
+        if (range === 0) return 100;
+        return clamp(((value - config.min) / range) * 100);
+      }
+      // value > target
+      const range = config.max - config.target;
+      if (range === 0) return 100;
+      return clamp(((config.max - value) / range) * 100);
     }
     case "P4": {
       return value >= config.threshold ? 100 : 0;

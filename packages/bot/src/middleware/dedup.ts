@@ -6,5 +6,10 @@ export async function dedupGuard(
     await ctx.reply("Обрабатываю предыдущий запрос... Подожди немного");
     return;
   }
-  await next();
+  ctx.session.processing = true;
+  try {
+    await next();
+  } finally {
+    ctx.session.processing = false;
+  }
 }

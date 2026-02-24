@@ -1,6 +1,7 @@
 export interface User {
   id: string;
-  telegram_id: number;
+  /** Supabase returns BIGINT as string; Telegram IDs > 2^53 possible */
+  telegram_id: string;
   username: string;
   created_at: Date;
   settings: Record<string, unknown>;

@@ -1,1 +1,4 @@
 [test]
+# Bun не поддерживает exclude в [test]
+# Для исключения dist/ запускать: bun test packages/*/src packages/*/test
+timeout = 10000

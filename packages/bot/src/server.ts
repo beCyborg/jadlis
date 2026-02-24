@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { Hono } from "hono";
 import { webhookCallback } from "grammy";
 import type { Bot } from "grammy";
@@ -18,10 +19,14 @@ export function createApp(deps: AppDeps) {
     return c.json({ ok: true, uptime: process.uptime() });
   });
 
-  // Telegram webhook — BOT_TOKEN in path + secret token validation
+  // Telegram webhook — hashed path (не раскрывает BOT_TOKEN в логах)
   if (deps.bot) {
+    const webhookPath = createHash("sha256")
+      .update(process.env.BOT_TOKEN ?? "")
+      .digest("hex")
+      .slice(0, 32);
     app.post(
-      `/webhook/${process.env.BOT_TOKEN}`,
+      `/webhook/${webhookPath}`,
       webhookCallback(deps.bot, "hono", {
         secretToken: process.env.WEBHOOK_SECRET,
       }),

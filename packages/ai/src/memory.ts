@@ -17,9 +17,14 @@ let _anthropic: Anthropic | null = null;
 
 function getSupabase(): SupabaseClient {
   if (!_supabase) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      throw new Error(
+        "SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables are required",
+      );
+    }
     _supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!,
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY,
     );
   }
   return _supabase;
@@ -272,11 +277,17 @@ export async function buildWorkingMemory(
 
   const workingMemory = lines.join("\n");
 
-  // 4. Persist cache
+  // 4. Persist cache — re-read session to avoid lost update on concurrent upsert
+  const { data: freshSession } = await supabase
+    .from("bot_sessions")
+    .select("value")
+    .eq("key", chatId)
+    .single();
+
   await supabase.from("bot_sessions").upsert({
     key: chatId,
     value: {
-      ...session,
+      ...(freshSession?.value ?? session),
       working_memory_cache: workingMemory,
       working_memory_updated_at: Date.now(),
     },
@@ -332,13 +343,14 @@ export async function summarizeAndStoreEpisode(
     .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
     .join("\n");
 
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 500,
-    messages: [
-      {
-        role: "user",
-        content: `Резюмируй этот диалог в 3-5 предложениях. Фокус:
+  try {
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 500,
+      messages: [
+        {
+          role: "user",
+          content: `Резюмируй этот диалог в 3-5 предложениях. Фокус:
 - Что обсуждалось
 - Ключевые решения
 - Эмоциональное состояние пользователя (если видно)
@@ -348,28 +360,31 @@ export async function summarizeAndStoreEpisode(
 
 Диалог:
 ${conversationText}`,
+        },
+      ],
+    });
+
+    const summaryBlock = response.content.find((b) => b.type === "text");
+    const summary = summaryBlock?.type === "text" ? summaryBlock.text : "";
+    if (!summary) return;
+
+    // 2. Embed and store
+    const embedding = await embedText(summary, { inputType: "document" });
+
+    await supabase.from("jadlis_documents").insert({
+      user_id: userId,
+      source_type: "memory_episode",
+      content: summary,
+      embedding,
+      metadata: {
+        messageCount: metadata?.messageCount ?? messages.length,
+        timestamp: new Date().toISOString(),
+        chatId: metadata?.chatId ?? "unknown",
       },
-    ],
-  });
-
-  const summaryBlock = response.content.find((b: any) => b.type === "text");
-  const summary = summaryBlock ? (summaryBlock as any).text : "";
-  if (!summary) return;
-
-  // 2. Embed and store
-  const embedding = await embedText(summary, { inputType: "document" });
-
-  await supabase.from("jadlis_documents").insert({
-    user_id: userId,
-    source_type: "memory_episode",
-    content: summary,
-    embedding,
-    metadata: {
-      messageCount: metadata?.messageCount ?? messages.length,
-      timestamp: new Date().toISOString(),
-      chatId: metadata?.chatId ?? "unknown",
-    },
-  });
+    });
+  } catch (err) {
+    console.error("[jadlis:memory] summarizeAndStoreEpisode failed:", err);
+  }
 
   // Note: Step 5 (fact extraction from episodes) deferred to post-MVP
 }

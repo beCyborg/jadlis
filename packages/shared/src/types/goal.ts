@@ -1,4 +1,10 @@
-export type GoalType = "Ф" | "Д" | "К";
+export type GoalType = "physical" | "achievement" | "career";
+/** Маппинг для обратной совместимости с DB (Ф/Д/К) */
+export const GOAL_TYPE_MAP = {
+  "Ф": "physical",
+  "Д": "achievement",
+  "К": "career",
+} as const;
 export type GoalStatus = "active" | "completed" | "paused" | "archived";
 export type StageStatus = "pending" | "active" | "completed";
 

@@ -68,11 +68,8 @@ CREATE INDEX idx_metric_values_user_time ON metric_values(user_id, recorded_at D
 CREATE INDEX idx_needs_user ON needs(user_id);
 CREATE INDEX idx_metrics_need ON metrics(need_id);
 CREATE INDEX idx_metrics_user ON metrics(user_id);
-CREATE INDEX idx_goals_user ON goals(user_id);
-CREATE INDEX idx_tasks_user ON tasks(user_id);
-CREATE INDEX idx_tasks_stage ON tasks(stage_id);
-CREATE INDEX idx_swot_user ON swot(user_id);
-CREATE INDEX idx_habits_user ON habits(user_id);
+-- idx_goals_user, idx_tasks_*, idx_swot_user, idx_habits_user
+-- перенесены после определений таблиц (см. конец файла)
 
 -- ============================================================
 -- days (дневные записи)
@@ -206,6 +203,13 @@ CREATE TABLE habit_completions (
 
 CREATE INDEX idx_habit_completions_habit_time ON habit_completions(habit_id, completed_at DESC);
 CREATE INDEX idx_habit_completions_user_time ON habit_completions(user_id, completed_at DESC);
+
+-- Индексы на FK (таблицы определены выше)
+CREATE INDEX idx_goals_user ON goals(user_id);
+CREATE INDEX idx_tasks_user ON tasks(user_id);
+CREATE INDEX idx_tasks_stage ON tasks(stage_id);
+CREATE INDEX idx_swot_user ON swot(user_id);
+CREATE INDEX idx_habits_user ON habits(user_id);
 
 -- ============================================================
 -- bot_sessions (grammY PostgreSQL adapter)
