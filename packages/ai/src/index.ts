@@ -35,3 +35,14 @@ export {
   summarizeAndStoreEpisode,
   searchMemory,
 } from "./memory";
+
+export {
+  runAgent,
+  getSubagentConfig,
+  createPreToolUseHook,
+  createPostToolUseHook,
+  MAX_TOOL_CALLS_PER_SESSION,
+  type AgentRunOptions,
+  type AgentDeps,
+  type SubagentConfig,
+} from "./agent";
