@@ -1,6 +1,26 @@
 import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test";
 import { Hono } from "hono";
 
+// Mock modules required by server.ts imports
+mock.module("@tma.js/init-data-node/web", () => ({
+  validate: async () => {},
+}));
+
+mock.module("../db", () => ({
+  supabase: {
+    from: () => ({
+      select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }), order: () => ({ limit: async () => ({ data: [], error: null }) }) }) }),
+    }),
+  },
+}));
+
+// Minimal mock supabase for createApp
+const mockSupabase = {
+  from: () => ({
+    select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }), order: () => ({ limit: async () => ({ data: [], error: null }) }) }) }),
+  }),
+} as any;
+
 // ============================================================
 // 1. Health Endpoint Tests
 // ============================================================
@@ -9,7 +29,7 @@ describe("Health endpoint", () => {
 
   beforeEach(async () => {
     const { createApp } = await import("../server");
-    app = createApp({ bot: null as any });
+    app = createApp({ bot: null as any, supabase: mockSupabase });
   });
 
   test("GET /health returns 200 with {ok: true}", async () => {
