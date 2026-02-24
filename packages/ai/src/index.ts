@@ -24,3 +24,14 @@ export {
   type SearchOptions,
   type SearchResult,
 } from "./search";
+
+export {
+  readFacts,
+  writeFact,
+  deleteFact,
+  buildWorkingMemory,
+  invalidateWorkingMemoryCache,
+  shouldTriggerEpisodeSummarization,
+  summarizeAndStoreEpisode,
+  searchMemory,
+} from "./memory";
