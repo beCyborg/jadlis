@@ -1,0 +1,1 @@
+-- Vector tables — implemented in section-03-supabase-schema

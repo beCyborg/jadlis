@@ -1,0 +1,1 @@
+-- Initial schema — implemented in section-03-supabase-schema

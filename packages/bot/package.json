@@ -1,0 +1,22 @@
+{
+  "name": "@jadlis/bot",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@jadlis/shared": "workspace:*",
+    "@jadlis/ai": "workspace:*",
+    "grammy": "1.40.0",
+    "hono": "^4.11.0",
+    "@supabase/supabase-js": "^2.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/bun": "latest"
+  }
+}

@@ -1,0 +1,1 @@
+-- SQL functions — implemented in section-03-supabase-schema

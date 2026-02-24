@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/bot" },
+    { "path": "./packages/ai" },
+    { "path": "./packages/mcp-servers" }
+  ],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "jadlis",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev": "bun run --cwd packages/bot src/index.ts",
+    "build": "bun run typecheck",
+    "test": "bun test",
+    "typecheck": "tsc --build",
+    "lint": "echo 'lint not configured'"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
