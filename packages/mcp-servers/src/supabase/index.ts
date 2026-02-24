@@ -8,16 +8,15 @@ import { z } from "zod";
 // Client
 // ============================================================
 
-function getSupabase(): SupabaseClient {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_KEY are required");
-  }
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-}
-
 let _supabase: SupabaseClient | null = null;
+
 function supabase(): SupabaseClient {
-  if (!_supabase) _supabase = getSupabase();
+  if (!_supabase) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      throw new Error("SUPABASE_URL and SUPABASE_SERVICE_KEY are required");
+    }
+    _supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  }
   return _supabase;
 }
 
@@ -108,8 +107,8 @@ export async function logHabitCompletion(
   });
   if (insertError) return err(insertError.message);
 
-  // Trigger momentum update via RPC
-  const { error: rpcError } = await supabase().rpc("update_habit_momentum", { p_habit_id: habitId });
+  // Trigger momentum update via RPC (p_completed=true since this is a completion log)
+  const { error: rpcError } = await supabase().rpc("update_habit_momentum", { p_habit_id: habitId, p_completed: true });
   if (rpcError) return ok({ success: true, warning: `Momentum update failed: ${rpcError.message}` });
 
   return ok({ success: true });
@@ -179,8 +178,8 @@ export async function searchEmbeddings(
       similarityThreshold: similarityThreshold ?? 0.7,
     });
     return ok(results);
-  } catch (e: any) {
-    return err(e.message);
+  } catch (e: unknown) {
+    return err(e instanceof Error ? e.message : String(e));
   }
 }
 

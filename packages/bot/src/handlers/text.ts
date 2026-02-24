@@ -1,4 +1,6 @@
-export async function handleText(ctx: any): Promise<void> {
+import type { BotContext } from "../bot";
+
+export async function handleText(ctx: BotContext): Promise<void> {
   // Placeholder: intent classification + AI routing
   // Will be implemented in section-06 (Claude API) and section-10 (Agent SDK)
   await ctx.reply(

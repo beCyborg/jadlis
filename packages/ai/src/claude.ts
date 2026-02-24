@@ -134,14 +134,11 @@ Momentum = clamp(0, 100, base + streak_bonus - decay)
 // System Prompt Builders
 // ============================================================
 
-type CacheableTextBlock = Anthropic.Messages.TextBlockParam & {
-  cache_control?: { type: "ephemeral" };
-};
-
+// TextBlockParam already includes cache_control?: CacheControlEphemeral | null (SDK 0.78+)
 function buildSystemBlocks(
   dynamicContext?: string,
-): CacheableTextBlock[] {
-  const blocks: CacheableTextBlock[] = [
+): Anthropic.Messages.TextBlockParam[] {
+  const blocks: Anthropic.Messages.TextBlockParam[] = [
     {
       type: "text",
       text: STABLE_SYSTEM_PROMPT,
@@ -204,21 +201,24 @@ async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
-    } catch (err: any) {
+    } catch (err) {
       lastError = err;
 
+      // Anthropic SDK errors carry a numeric `status` field
+      const status = (err as { status?: number })?.status;
+
       // Do NOT retry rate limits (429)
-      if (err?.status === 429) {
+      if (status === 429) {
         throw err;
       }
 
-      // Only retry on 5xx or network errors
-      if (attempt < maxRetries && (err?.status >= 500 || !err?.status)) {
+      // Only retry on 5xx or network errors (no status)
+      if (attempt < maxRetries && (!status || status >= 500)) {
         const jitter = Math.random() * 500;
         const delay = Math.pow(2, attempt) * 1000 + jitter;
         await new Promise((r) => setTimeout(r, delay));
@@ -253,12 +253,11 @@ export async function createMessage(
       }),
     );
 
-    const textBlock = response.content.find(
-      (b) => b.type === "text",
-    );
-    return textBlock?.type === "text" ? textBlock.text : FALLBACK_MESSAGE;
-  } catch (err: any) {
-    console.error("[jadlis:claude] API error:", err?.status, err?.message);
+    const textBlock = response.content.find((b) => b.type === "text");
+    return textBlock ? textBlock.text : FALLBACK_MESSAGE;
+  } catch (err) {
+    const e = err as { status?: number; message?: string };
+    console.error("[jadlis:claude] API error:", e?.status, e?.message);
     return FALLBACK_MESSAGE;
   }
 }
@@ -284,11 +283,9 @@ export async function classifyIntent(
       }),
     );
 
-    const toolUse = response.content.find(
-      (b) => b.type === "tool_use",
-    );
-    if (toolUse?.type === "tool_use") {
-      const input = toolUse.input as ClassifiedIntent;
+    const toolUse = response.content.find((b) => b.type === "tool_use");
+    if (toolUse) {
+      const input = (toolUse as { input: ClassifiedIntent }).input;
       return {
         intent: input.intent,
         urgency: input.urgency,
@@ -298,8 +295,9 @@ export async function classifyIntent(
 
     console.warn("[jadlis:claude] classifyIntent: expected tool_use block absent, returning default");
     return defaultIntent;
-  } catch (err: any) {
-    console.error("[jadlis:claude] classifyIntent error:", err?.status, err?.message);
+  } catch (err) {
+    const e = err as { status?: number; message?: string };
+    console.error("[jadlis:claude] classifyIntent error:", e?.status, e?.message);
     return defaultIntent;
   }
 }

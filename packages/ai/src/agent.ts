@@ -1,4 +1,4 @@
-import { query, type Options, type SDKMessage, type HookCallback } from "@anthropic-ai/claude-agent-sdk";
+import { query, type Options, type SDKMessage, type SDKResultSuccess, type HookCallback } from "@anthropic-ai/claude-agent-sdk";
 import { buildWorkingMemory, invalidateWorkingMemoryCache } from "./memory";
 
 // ============================================================
@@ -65,11 +65,12 @@ const JADLIS_SYSTEM_PROMPT = `Ты — Jadlis, персональный ИИ-п�
 
 async function buildSystemPromptWith(
   userId: string,
+  chatId: string,
   getWorkingMemory: typeof buildWorkingMemory,
 ): Promise<string> {
   let workingMemory = "";
   try {
-    workingMemory = await getWorkingMemory(userId);
+    workingMemory = await getWorkingMemory(userId, chatId);
   } catch {
     // Non-fatal: continue with empty working memory
   }
@@ -189,7 +190,7 @@ export async function runAgent(
   options: AgentRunOptions,
   deps: AgentDeps = defaultDeps,
 ): Promise<string> {
-  const systemPrompt = await buildSystemPromptWith(options.userId, deps.buildWorkingMemory);
+  const systemPrompt = await buildSystemPromptWith(options.userId, options.sessionKey, deps.buildWorkingMemory);
 
   const preToolUse = createPreToolUseHook();
   const postToolUse = createPostToolUseHook();
@@ -221,7 +222,7 @@ export async function runAgent(
   for await (const message of conversation) {
     if (message.type === "result") {
       if (message.subtype === "success") {
-        finalResult = (message as any).result ?? "";
+        finalResult = (message as SDKResultSuccess).result;
       }
       break;
     }
@@ -229,7 +230,7 @@ export async function runAgent(
 
   // Invalidate working memory cache so next call gets fresh context
   try {
-    await deps.invalidateWorkingMemoryCache(options.userId);
+    await deps.invalidateWorkingMemoryCache(options.sessionKey);
   } catch {
     // Non-fatal
   }

@@ -24,6 +24,7 @@ function getFirecrawl(): FirecrawlApp {
 
 type McpResult = { content: { type: "text"; text: string }[]; isError?: boolean };
 
+// Strings (markdown) are returned as-is; other values are JSON-serialised.
 function ok(data: unknown): McpResult {
   return { content: [{ type: "text", text: typeof data === "string" ? data : JSON.stringify(data, null, 2) }] };
 }
@@ -41,8 +42,8 @@ export async function scrapePage(url: string): Promise<McpResult> {
     const result = await getFirecrawl().scrapeUrl(url, { formats: ["markdown"] });
     if (!result.success) return err("Scrape failed");
     return ok(result.markdown ?? "");
-  } catch (e: any) {
-    return err(e.message);
+  } catch (e: unknown) {
+    return err(e instanceof Error ? e.message : String(e));
   }
 }
 
@@ -50,13 +51,13 @@ export async function extractStructured(
   url: string, schema: Record<string, unknown>, prompt?: string,
 ): Promise<McpResult> {
   try {
-    const opts: any = { schema };
+    const opts: { schema: Record<string, unknown>; prompt?: string } = { schema };
     if (prompt) opts.prompt = prompt;
     const result = await getFirecrawl().extract([url], opts);
     if (!result.success) return err("Extraction failed");
     return ok(result.data);
-  } catch (e: any) {
-    return err(e.message);
+  } catch (e: unknown) {
+    return err(e instanceof Error ? e.message : String(e));
   }
 }
 

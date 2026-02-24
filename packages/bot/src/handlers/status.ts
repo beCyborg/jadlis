@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AuthedContext, BotContext } from "../bot";
 
 export function createStatusHandler(supabase: SupabaseClient) {
-  return async function handleStatus(ctx: any): Promise<void> {
-    const userId = ctx.userId;
+  return async function handleStatus(ctx: BotContext): Promise<void> {
+    const userId = (ctx as AuthedContext).userId;
 
     const { data: needs } = await supabase
       .from("needs")

@@ -3,9 +3,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { embedText } from "./embeddings";
 import { semanticSearch, type SearchResult } from "./search";
 import type {
+  Goal,
+  Habit,
+  MemoryFact,
   MemoryFactCategory,
   MemoryFactSource,
-  MemoryFact,
 } from "@jadlis/shared";
 
 // ============================================================
@@ -228,9 +230,9 @@ export async function buildWorkingMemory(
       .limit(3),
   ]);
 
-  const goals = (goalsResult.data ?? []).slice(0, 3);
-  const habits = (habitsResult.data ?? []).slice(0, MAX_HABITS_IN_WORKING_MEMORY);
-  const facts = (factsResult.data ?? []).slice(0, 3);
+  const goals = (goalsResult.data ?? []).slice(0, 3) as Goal[];
+  const habits = (habitsResult.data ?? []).slice(0, MAX_HABITS_IN_WORKING_MEMORY) as Habit[];
+  const facts = (factsResult.data ?? []).slice(0, 3) as MemoryFact[];
 
   // 3. Format
   const now = new Date();
@@ -248,7 +250,7 @@ export async function buildWorkingMemory(
 
   if (goals.length > 0) {
     lines.push("Активные цели (топ 3):");
-    goals.forEach((g: any, i: number) => {
+    goals.forEach((g, i) => {
       const progress = `[прогресс: ${g.progress ?? 0}%]`;
       const deadline = g.target_date ? ` — срок: ${g.target_date}` : "";
       lines.push(`${i + 1}. ${g.title} ${progress}${deadline}`);
@@ -258,7 +260,7 @@ export async function buildWorkingMemory(
 
   if (habits.length > 0) {
     lines.push("Активные привычки:");
-    habits.forEach((h: any) => {
+    habits.forEach((h) => {
       const momentum = h.momentum != null ? `momentum: ${h.momentum}` : "";
       const streak = h.streak != null ? `серия: ${h.streak} дней` : "";
       const parts = [momentum, streak].filter(Boolean).join(", ");
@@ -269,7 +271,7 @@ export async function buildWorkingMemory(
 
   if (facts.length > 0) {
     lines.push("Последние инсайты:");
-    facts.forEach((f: any) => {
+    facts.forEach((f) => {
       lines.push(`- ${f.key}: ${f.value}`);
     });
     lines.push("");
@@ -365,7 +367,7 @@ ${conversationText}`,
     });
 
     const summaryBlock = response.content.find((b) => b.type === "text");
-    const summary = summaryBlock?.type === "text" ? summaryBlock.text : "";
+    const summary = summaryBlock ? summaryBlock.text : "";
     if (!summary) return;
 
     // 2. Embed and store

@@ -1,12 +1,13 @@
 import { validate } from "@tma.js/init-data-node/web";
 import type { MiddlewareHandler } from "hono";
+import type { ApiEnv } from "../api/types";
 
 /**
  * Validates Telegram Mini App initData from X-Telegram-Init-Data header.
  * Rejects requests older than 24 hours (expiresIn: 86400).
  * On success, extracts user info and sets c.set("telegramUser", ...).
  */
-export const hmacMiddleware: MiddlewareHandler = async (c, next) => {
+export const hmacMiddleware: MiddlewareHandler<ApiEnv> = async (c, next) => {
   const initData = c.req.header("X-Telegram-Init-Data");
   if (!initData) {
     return c.json({ error: "Unauthorized" }, 401);

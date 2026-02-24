@@ -1,10 +1,12 @@
+import type { BotContext } from "../bot";
+
 export async function requestLogger(
-  ctx: any,
+  ctx: BotContext,
   next: () => Promise<void>,
 ): Promise<void> {
   const chatId = ctx.chat?.id;
-  const updateType = ctx.updateType;
   const username = ctx.from?.username ?? "unknown";
+  const updateType = Object.keys(ctx.update).find((k) => k !== "update_id") ?? "unknown";
   console.log(
     JSON.stringify({
       chat_id: chatId,

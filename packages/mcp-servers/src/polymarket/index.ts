@@ -22,22 +22,38 @@ function err(message: string): McpResult {
 // Probability parsing
 // ============================================================
 
-function parseProbability(market: any): number {
+interface RawMarket {
+  id: string;
+  question: string;
+  outcomePrices?: string;
+  tokens?: { price: string | number }[];
+  volume?: number;
+  volumeNum?: number;
+}
+
+interface MappedMarket {
+  id: string;
+  question: string;
+  probability: number;
+  volume: number;
+}
+
+function parseProbability(market: RawMarket): number {
   if (market.outcomePrices) {
     try {
-      const prices = JSON.parse(market.outcomePrices);
-      return parseFloat(prices[0]) || 0;
+      const prices: unknown[] = JSON.parse(market.outcomePrices);
+      return parseFloat(String(prices[0])) || 0;
     } catch {
       return 0;
     }
   }
   if (market.tokens?.[0]?.price != null) {
-    return parseFloat(market.tokens[0].price);
+    return parseFloat(String(market.tokens[0].price));
   }
   return 0;
 }
 
-function mapMarket(m: any) {
+function mapMarket(m: RawMarket): MappedMarket {
   return {
     id: m.id,
     question: m.question,
@@ -55,10 +71,10 @@ export async function searchMarkets(keyword: string, limit: number = 10): Promis
     const url = `${GAMMA_API}/markets?q=${encodeURIComponent(keyword)}&limit=${limit}`;
     const response = await fetch(url);
     if (!response.ok) return err(`Gamma API: ${response.status}`);
-    const markets = await response.json();
-    return ok(Array.isArray(markets) ? markets.map(mapMarket) : []);
-  } catch (e: any) {
-    return err(e.message);
+    const markets: unknown = await response.json();
+    return ok(Array.isArray(markets) ? (markets as RawMarket[]).map(mapMarket) : []);
+  } catch (e: unknown) {
+    return err(e instanceof Error ? e.message : String(e));
   }
 }
 
@@ -67,19 +83,19 @@ export async function getMarketProbability(marketId: string): Promise<McpResult>
     const url = `${GAMMA_API}/markets/${marketId}`;
     const response = await fetch(url);
     if (!response.ok) return err(`Gamma API: ${response.status}`);
-    const market = await response.json();
+    const market = await response.json() as RawMarket;
     return ok({
       id: market.id,
       question: market.question,
       probability: parseProbability(market),
     });
-  } catch (e: any) {
-    return err(e.message);
+  } catch (e: unknown) {
+    return err(e instanceof Error ? e.message : String(e));
   }
 }
 
 export async function getMarketsForTopics(topics: string[], limit: number = 5): Promise<McpResult> {
-  const results: Record<string, any[]> = {};
+  const results: Record<string, MappedMarket[]> = {};
   for (const topic of topics) {
     try {
       const url = `${GAMMA_API}/markets?q=${encodeURIComponent(topic)}&limit=${limit}`;
@@ -88,8 +104,8 @@ export async function getMarketsForTopics(topics: string[], limit: number = 5): 
         results[topic] = [];
         continue;
       }
-      const markets = await response.json();
-      results[topic] = Array.isArray(markets) ? markets.map(mapMarket) : [];
+      const markets: unknown = await response.json();
+      results[topic] = Array.isArray(markets) ? (markets as RawMarket[]).map(mapMarket) : [];
     } catch {
       results[topic] = [];
     }

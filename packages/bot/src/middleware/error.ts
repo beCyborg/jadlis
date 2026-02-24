@@ -1,5 +1,7 @@
+import type { BotContext } from "../bot";
+
 export async function errorBoundary(
-  ctx: any,
+  ctx: BotContext,
   next: () => Promise<void>,
 ): Promise<void> {
   try {

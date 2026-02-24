@@ -24,6 +24,9 @@ export type SessionData = {
 
 export type BotContext = Context & SessionFlavor<SessionData>;
 
+/** Extended context available in handlers that run after authMiddleware. */
+export type AuthedContext = BotContext & { userId: string };
+
 export const bot = new Bot<BotContext>(process.env.BOT_TOKEN!);
 
 // Middleware chain (order is critical)

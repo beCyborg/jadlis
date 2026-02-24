@@ -3,12 +3,13 @@ import { Hono } from "hono";
 import { webhookCallback } from "grammy";
 import type { Bot } from "grammy";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { BotContext } from "./bot";
 import { createApiRouter } from "./api/index";
 import { createIngestRouter } from "./ingest/health";
 import { timingSafeCompare } from "./utils/crypto";
 
 interface AppDeps {
-  bot: Bot<any> | null;
+  bot: Bot<BotContext> | null;
   supabase: SupabaseClient;
 }
 

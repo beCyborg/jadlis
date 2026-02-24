@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AuthedContext, BotContext } from "../bot";
 
 export function createAuthMiddleware(supabase: SupabaseClient) {
   return async function authMiddleware(
-    ctx: any,
+    ctx: BotContext,
     next: () => Promise<void>,
   ): Promise<void> {
     // /start bypasses auth — allows new user creation
@@ -29,7 +30,7 @@ export function createAuthMiddleware(supabase: SupabaseClient) {
     }
 
     // Attach user UUID to context for downstream handlers
-    ctx.userId = data.id;
+    (ctx as AuthedContext).userId = data.id;
 
     await next();
   };

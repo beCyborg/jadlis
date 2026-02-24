@@ -1,4 +1,6 @@
-export async function handleHelp(ctx: any): Promise<void> {
+import type { BotContext } from "../bot";
+
+export async function handleHelp(ctx: BotContext): Promise<void> {
   await ctx.reply(
     "Доступные команды:\n\n" +
       "/start   — Начать работу\n" +

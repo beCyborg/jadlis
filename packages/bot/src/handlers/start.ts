@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { BotContext } from "../bot";
 
 export function createStartHandler(supabase: SupabaseClient) {
-  return async function handleStart(ctx: any): Promise<void> {
+  return async function handleStart(ctx: BotContext): Promise<void> {
     const telegramId = ctx.from?.id;
     if (telegramId == null) {
       await ctx.reply("Не удалось определить пользователя. Попробуй ещё раз.");

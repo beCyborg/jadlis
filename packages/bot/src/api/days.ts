@@ -1,20 +1,13 @@
 import { Hono } from "hono";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { type ApiEnv, resolveDbUser } from "./types";
 
 export function createDaysRouter(supabase: SupabaseClient) {
-  const router = new Hono();
+  const router = new Hono<ApiEnv>();
 
   router.get("/", async (c) => {
-    const user = c.get("telegramUser") as { id: number } | undefined;
-    if (!user) return c.json({ error: "No user context" }, 400);
-
-    const { data: dbUser } = await supabase
-      .from("users")
-      .select("id")
-      .eq("telegram_id", user.id)
-      .single();
-
-    if (!dbUser) return c.json({ error: "User not found" }, 404);
+    const dbUser = await resolveDbUser(c, supabase);
+    if (dbUser instanceof Response) return dbUser;
 
     const rangeParam = c.req.query("range");
     const range = Math.min(Math.max(Number(rangeParam) || 7, 1), 90);

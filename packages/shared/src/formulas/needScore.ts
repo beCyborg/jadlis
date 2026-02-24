@@ -15,14 +15,16 @@ export interface WeightedValue {
 export function calculateNeedScore(inputs: WeightedValue[]): number {
   if (inputs.length === 0) return 0;
 
-  const totalWeight = inputs.reduce((sum, i) => sum + i.weight, 0);
-  if (totalWeight === 0) return 0;
+  const validInputs = inputs.filter((i) => i.weight > 0);
+  if (validInputs.length === 0) return 0;
 
-  const mean = calcWeightedMean(inputs, totalWeight);
-  const stddev = calcWeightedStdDev(inputs, mean, totalWeight);
+  const totalWeight = validInputs.reduce((sum, i) => sum + i.weight, 0);
+
+  const mean = calcWeightedMean(validInputs, totalWeight);
+  const stddev = calcWeightedStdDev(validInputs, mean, totalWeight);
   const cv = mean > 0 ? stddev / mean : 0;
   const cvScore = cv * 100;
-  const floorPenalty = calcFloorPenalty(inputs.map((i) => i.value));
+  const floorPenalty = calcFloorPenalty(validInputs.map((i) => i.value));
 
   const raw = (mean - 0.15 * cvScore) * floorPenalty;
   return clamp(raw);
@@ -41,7 +43,7 @@ function calcWeightedStdDev(
   totalWeight: number,
 ): number {
   const variance =
-    inputs.reduce((sum, i) => sum + Math.abs(i.weight) * (i.value - mean) ** 2, 0) /
+    inputs.reduce((sum, i) => sum + i.weight * (i.value - mean) ** 2, 0) /
     totalWeight;
   return Math.sqrt(Math.max(0, variance));
 }
