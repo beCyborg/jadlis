@@ -8,16 +8,21 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@grammyjs/conversations": "^2.1.1",
     "@jadlis/ai": "workspace:*",
     "@jadlis/shared": "workspace:*",
     "@supabase/supabase-js": "^2.0.0",
     "@tma.js/init-data-node": "^2.0.6",
+    "bullmq": "^5.70.1",
     "grammy": "1.40.0",
     "hono": "^4.11.0",
+    "ioredis": "^5.9.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "@types/bun": "latest"
+    "@bull-board/api": "^6.20.2",
+    "@bull-board/hono": "^6.20.2",
+    "@types/bun": "latest",
+    "typescript": "^5.4.0"
   }
 }

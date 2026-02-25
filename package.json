@@ -11,6 +11,8 @@
     "lint": "echo 'lint not configured'"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "js-yaml": "^4.1.1",
     "typescript": "^5.4.0"
   }
 }
