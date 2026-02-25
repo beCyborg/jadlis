@@ -1,6 +1,7 @@
 import { Queue, Worker, UnrecoverableError } from "bullmq";
 import type { Api } from "grammy";
 import { getRedisConnection } from "./connection";
+import { scheduleReminders } from "./reminders";
 
 export const QUEUE_NAME = "jadlis-notifications";
 
@@ -109,6 +110,12 @@ export function createNotificationWorker(
         await botApi.sendMessage(chatId, text, {
           reply_markup: keyboard,
         });
+
+        // Schedule follow-up reminders for ritual notifications
+        if (type === "neuro-charge" || type === "evening-scanner") {
+          const { userId } = job.data;
+          await scheduleReminders(userId, chatId, type);
+        }
       } catch (err: unknown) {
         if (
           err &&

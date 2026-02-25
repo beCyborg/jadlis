@@ -12,6 +12,7 @@ import { createStatusHandler } from "./handlers/status";
 import { createGoalsHandler } from "./handlers/goals";
 import { createHabitsHandler } from "./handlers/habits";
 import { handleText } from "./handlers/text";
+import { registerNeuroChargeHandlers } from "./handlers/neuroCharge";
 import { supabase } from "./db";
 
 export type SessionData = {
@@ -48,6 +49,9 @@ bot.command("help", handleHelp);
 bot.command("status", createStatusHandler(supabase));
 bot.command("goals", createGoalsHandler(supabase));
 bot.command("habits", createHabitsHandler(supabase));
+
+// Callback queries
+registerNeuroChargeHandlers(bot);
 
 // Text messages
 bot.on("message:text", handleText);
