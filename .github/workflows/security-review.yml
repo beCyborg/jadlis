@@ -1,0 +1,36 @@
+name: Security Review
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'context/**'
+      - 'research/**'
+      - '.claude/**'
+      - 'supabase/seed.sql'
+
+concurrency:
+  group: security-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  security-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+
+      - uses: anthropics/claude-code-security-review@main
+        with:
+          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-model: claude-sonnet-4-6
+          comment-pr: true
+          exclude-directories: node_modules,dist,coverage,context,research,.claude
+          claudecode-timeout: 15
