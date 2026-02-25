@@ -96,24 +96,35 @@ export function createPreToolUseHook(): HookCallback {
     const hookInput = input as { tool_name?: string; tool_input?: Record<string, unknown> };
     if (hookInput.tool_name?.startsWith("jadlis-supabase") && !hookInput.tool_input?.user_id) {
       return {
-        hookEventName: "PreToolUse" as const,
-        permissionDecision: "deny" as const,
-        permissionDecisionReason: "Missing user_id in supabase tool input",
+        decision: "block" as const,
+        reason: "Missing user_id in supabase tool input",
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse" as const,
+          permissionDecision: "deny" as const,
+          permissionDecisionReason: "Missing user_id in supabase tool input",
+        },
       };
     }
 
     callCount++;
     if (callCount > MAX_TOOL_CALLS_PER_SESSION) {
       return {
-        hookEventName: "PreToolUse" as const,
-        permissionDecision: "deny" as const,
-        permissionDecisionReason: `Rate limit exceeded: ${MAX_TOOL_CALLS_PER_SESSION} tool calls per session`,
+        decision: "block" as const,
+        reason: `Rate limit exceeded: ${MAX_TOOL_CALLS_PER_SESSION} tool calls per session`,
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse" as const,
+          permissionDecision: "deny" as const,
+          permissionDecisionReason: `Rate limit exceeded: ${MAX_TOOL_CALLS_PER_SESSION} tool calls per session`,
+        },
       };
     }
 
     return {
-      hookEventName: "PreToolUse" as const,
-      permissionDecision: "allow" as const,
+      decision: "approve" as const,
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse" as const,
+        permissionDecision: "allow" as const,
+      },
     };
   };
 }
@@ -138,7 +149,10 @@ export function createPostToolUseHook(): HookCallback {
     }
 
     return {
-      hookEventName: "PostToolUse" as const,
+      continue: true,
+      hookSpecificOutput: {
+        hookEventName: "PostToolUse" as const,
+      },
     };
   };
 }

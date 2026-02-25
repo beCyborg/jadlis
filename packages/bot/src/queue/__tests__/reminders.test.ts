@@ -28,11 +28,11 @@ describe("scheduleReminders", () => {
     await scheduleReminders(123, 456, "neuro-charge");
     expect(mockQueueAdd).toHaveBeenCalledTimes(2);
 
-    const call1 = mockQueueAdd.mock.calls[0];
+    const call1 = mockQueueAdd.mock.calls[0] as any[];
     expect(call1[2].delay).toBe(15 * 60 * 1000);
     expect(call1[2].jobId).toBe("reminder-123-neuro-charge-1");
 
-    const call2 = mockQueueAdd.mock.calls[1];
+    const call2 = mockQueueAdd.mock.calls[1] as any[];
     expect(call2[2].delay).toBe(30 * 60 * 1000);
     expect(call2[2].jobId).toBe("reminder-123-neuro-charge-2");
   });
@@ -76,9 +76,9 @@ describe("handleReminderTimeout", () => {
     await handleReminderTimeout(123, 456, "neuro-charge", mockBotApi as never);
 
     expect(mockBotApi.sendMessage).toHaveBeenCalledTimes(1);
-    const [chatId, text, opts] = mockBotApi.sendMessage.mock.calls[0];
+    const [chatId, text, opts] = mockBotApi.sendMessage.mock.calls[0] as any[];
     expect(chatId).toBe(456);
     expect(text).toContain("утреннему чек-ину");
-    expect(opts.reply_markup.inline_keyboard[0][0].callback_data).toBe("morning_checkin:start");
+    expect(opts!.reply_markup.inline_keyboard[0][0].callback_data).toBe("morning_checkin:start");
   });
 });

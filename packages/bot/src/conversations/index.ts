@@ -12,7 +12,7 @@ const CONVERSATION_TIMEOUT_MS = 3_600_000;
 
 // Placeholder conversation builders (replaced by sections 04 and 05)
 async function morningCheckin(
-  conversation: Conversation<BotContext>,
+  conversation: Conversation<BotContext, BotContext>,
   ctx: BotContext,
 ) {
   // Stub — will be implemented in section-04-morning-checkin
@@ -20,7 +20,7 @@ async function morningCheckin(
 }
 
 async function eveningScanner(
-  conversation: Conversation<BotContext>,
+  conversation: Conversation<BotContext, BotContext>,
   ctx: BotContext,
 ) {
   // Stub — will be implemented in section-05-evening-scanner
@@ -34,7 +34,7 @@ async function eveningScanner(
  */
 export function setupConversations(bot: Bot<BotContext>): void {
   bot.use(
-    conversations<BotContext>({
+    conversations<BotContext, BotContext>({
       storage: {
         type: "key",
         version: CONVERSATION_VERSION,
@@ -44,14 +44,14 @@ export function setupConversations(bot: Bot<BotContext>): void {
   );
 
   bot.use(
-    createConversation<BotContext>(morningCheckin, {
+    createConversation<BotContext, BotContext>(morningCheckin, {
       id: "morningCheckin",
       maxMillisecondsToWait: CONVERSATION_TIMEOUT_MS,
     }),
   );
 
   bot.use(
-    createConversation<BotContext>(eveningScanner, {
+    createConversation<BotContext, BotContext>(eveningScanner, {
       id: "eveningScanner",
       maxMillisecondsToWait: CONVERSATION_TIMEOUT_MS,
     }),

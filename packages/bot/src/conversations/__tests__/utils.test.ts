@@ -27,7 +27,7 @@ describe("sendRatingKeyboard", () => {
     await sendRatingKeyboard(mockCtx as never, "Оцените физическое состояние:", "rating_h01");
 
     expect(mockCtx.reply).toHaveBeenCalledTimes(1);
-    const [text, opts] = mockCtx.reply.mock.calls[0];
+    const [text, opts] = mockCtx.reply.mock.calls[0] as any[];
     expect(text).toContain("Оцените");
 
     const keyboard = opts.reply_markup.inline_keyboard;
@@ -51,7 +51,7 @@ describe("sendConfirmKeyboard", () => {
 
     await sendConfirmKeyboard(mockCtx as never, "Подтвердите план");
 
-    const [, opts] = mockCtx.reply.mock.calls[0];
+    const [, opts] = mockCtx.reply.mock.calls[0] as any[];
     const buttons = opts.reply_markup.inline_keyboard[0];
     expect(buttons).toHaveLength(3);
     expect(buttons[0].callback_data).toBe("confirm:accept");
