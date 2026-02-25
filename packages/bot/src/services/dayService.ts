@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
+ * Сервис для работы с записями дня (days).
+ * Каждый день пользователя хранится как запись в таблице `days`.
+ * @module dayService
+ */
+
+/**
  * Checks if the morning check-in is already completed today.
  * Returns true when a days record exists with zone IS NOT NULL.
  *
