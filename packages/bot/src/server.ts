@@ -7,6 +7,7 @@ import type { BotContext } from "./bot";
 import { createApiRouter } from "./api/index";
 import { createIngestRouter } from "./ingest/health";
 import { timingSafeCompare } from "./utils/crypto";
+import { getNotificationQueue } from "./queue";
 
 interface AppDeps {
   bot: Bot<BotContext> | null;
@@ -16,8 +17,15 @@ interface AppDeps {
 export function createApp(deps: AppDeps) {
   const app = new Hono();
 
-  app.get("/health", (c) => {
-    return c.json({ ok: true, uptime: process.uptime() });
+  app.get("/health", async (c) => {
+    let queue = {};
+    try {
+      const q = getNotificationQueue();
+      queue = await q.getJobCounts("active", "waiting", "delayed", "failed");
+    } catch {
+      queue = { error: "unavailable" };
+    }
+    return c.json({ ok: true, uptime: process.uptime(), queue });
   });
 
   // Telegram webhook — hashed path (не раскрывает BOT_TOKEN в логах)
@@ -39,6 +47,20 @@ export function createApp(deps: AppDeps) {
 
   // Health Auto Export ingest (Bearer token)
   app.route("/ingest", createIngestRouter(deps.supabase));
+
+  // Bull Board (dev-only)
+  if (process.env.NODE_ENV !== "production") {
+    import("@bull-board/api").then(({ createBullBoard, BullMQAdapter }) => {
+      import("@bull-board/hono").then(({ HonoAdapter }) => {
+        const serverAdapter = new HonoAdapter("/admin/queues");
+        createBullBoard({
+          queues: [new BullMQAdapter(getNotificationQueue())],
+          serverAdapter,
+        });
+        app.route("/admin/queues", serverAdapter.registerPlugin());
+      });
+    });
+  }
 
   // Cron endpoint (Bearer CRON_SECRET)
   app.post("/cron/daily-digest", async (c) => {
