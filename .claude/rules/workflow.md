@@ -11,6 +11,14 @@
 /deep-implement @/Users/cyborg/Documents/jadlis-creator/context/jadlis/<NN-name>/sections/.
 ```
 
+### Research (шаг 7 deep-plan) — обязательные источники
+
+При web research **всегда** использовать дополнительно:
+1. **Reddit MCP** (`mcp__claude_ai_Reddit`) — реальный опыт, подводные камни
+2. **Exa MCP** (`mcp__claude_ai_Exa`) — глубокий поиск статей, кода, паттернов
+
+Результаты включать в `claude-research.md` отдельными секциями.
+
 ### Советники (перед одобрением плана)
 
 **Всегда:**
