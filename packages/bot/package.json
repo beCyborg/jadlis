@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@grammyjs/conversations": "^2.1.1",
     "@jadlis/ai": "workspace:*",
     "@jadlis/shared": "workspace:*",
     "@supabase/supabase-js": "^2.0.0",

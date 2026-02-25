@@ -27,6 +27,7 @@
       "name": "@jadlis/bot",
       "version": "0.1.0",
       "dependencies": {
+        "@grammyjs/conversations": "^2.1.1",
         "@jadlis/ai": "workspace:*",
         "@jadlis/shared": "workspace:*",
         "@supabase/supabase-js": "^2.0.0",
@@ -81,6 +82,8 @@
     "@bull-board/hono": ["@bull-board/hono@6.20.2", "", { "dependencies": { "@bull-board/api": "6.20.2", "@bull-board/ui": "6.20.2", "ejs": "^3.1.10" }, "peerDependencies": { "hono": "^4" } }, "sha512-OZEkDf/EQiUOYpxtX70ohaCCo99wv0Ga922/u5qj+axaYNDgw9cQjoueGyvI2JDq45/c8JbyI9XWx5DRBSnPEQ=="],
 
     "@bull-board/ui": ["@bull-board/ui@6.20.2", "", { "dependencies": { "@bull-board/api": "6.20.2" } }, "sha512-Fm0OaMJSE5oFok7M6ZEbgRfCsRU6nfFc26f9lLcx7HnYyv/Ypqa/LvAARrXLmfyZULnkFXxQGTXpAgiWCOxNQw=="],
+
+    "@grammyjs/conversations": ["@grammyjs/conversations@2.1.1", "", { "peerDependencies": { "grammy": "^1.20.1" } }, "sha512-hoxqwSkaXDeU7mzXulpk3A4Cmd6UZO3HU4aPoITX5ekSHK7ZcUEmMl7RhKKkqw3z6zVbbAShQreJoVV5/dDSLA=="],
 
     "@grammyjs/types": ["@grammyjs/types@3.24.0", "", {}, "sha512-qQIEs4lN5WqUdr4aT8MeU6UFpMbGYAvcvYSW1A4OO1PABGJQHz/KLON6qvpf+5RxaNDQBxiY2k2otIhg/AG7RQ=="],
 

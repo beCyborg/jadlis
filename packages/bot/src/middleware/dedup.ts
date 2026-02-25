@@ -1,5 +1,9 @@
 import type { BotContext } from "../bot";
 
+/**
+ * Dedup guard middleware.
+ * Prevents concurrent processing of updates from the same user session.
+ */
 export async function dedupGuard(
   ctx: BotContext,
   next: () => Promise<void>,

@@ -1,9 +1,11 @@
 import { Bot, type Context, type SessionFlavor } from "grammy";
+import type { ConversationFlavor } from "@grammyjs/conversations";
 import { errorBoundary } from "./middleware/error";
 import { requestLogger } from "./middleware/logging";
 import { createSessionMiddleware } from "./middleware/session";
 import { dedupGuard } from "./middleware/dedup";
 import { createAuthMiddleware } from "./middleware/auth";
+import { setupConversations } from "./conversations";
 import { createStartHandler } from "./handlers/start";
 import { handleHelp } from "./handlers/help";
 import { createStatusHandler } from "./handlers/status";
@@ -22,17 +24,21 @@ export type SessionData = {
   message_count: number;
 };
 
-export type BotContext = Context & SessionFlavor<SessionData>;
+export type BotContext = Context &
+  SessionFlavor<SessionData> &
+  ConversationFlavor;
 
 /** Extended context available in handlers that run after authMiddleware. */
 export type AuthedContext = BotContext & { userId: string };
 
 export const bot = new Bot<BotContext>(process.env.BOT_TOKEN!);
 
-// Middleware chain (order is critical)
+// Middleware chain (order is critical):
+// error → logger → session → conversations → dedup → auth → handlers
 bot.use(errorBoundary);
 bot.use(requestLogger);
 bot.use(createSessionMiddleware(supabase));
+setupConversations(bot); // conversations plugin + /cancel command
 bot.use(dedupGuard);
 bot.use(createAuthMiddleware(supabase));
 
