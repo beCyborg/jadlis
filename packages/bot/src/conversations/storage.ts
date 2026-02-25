@@ -1,4 +1,4 @@
-import type { VersionedState } from "@grammyjs/conversations";
+import type { ConversationData, VersionedState } from "@grammyjs/conversations";
 import { getRedisConnection } from "../queue/connection";
 
 const KEY_PREFIX = "jadlis:conv:";
@@ -10,12 +10,12 @@ const KEY_PREFIX = "jadlis:conv:";
 export function createRedisStorage() {
   const redis = getRedisConnection();
   return {
-    async read(key: string): Promise<VersionedState<unknown> | undefined> {
+    async read(key: string): Promise<VersionedState<ConversationData> | undefined> {
       const raw = await redis.get(`${KEY_PREFIX}${key}`);
       if (!raw) return undefined;
-      return JSON.parse(raw) as VersionedState<unknown>;
+      return JSON.parse(raw) as VersionedState<ConversationData>;
     },
-    async write(key: string, state: VersionedState<unknown>): Promise<void> {
+    async write(key: string, state: VersionedState<ConversationData>): Promise<void> {
       // TTL 24h — conversations should not live longer than a day
       await redis.set(`${KEY_PREFIX}${key}`, JSON.stringify(state), "EX", 86400);
     },

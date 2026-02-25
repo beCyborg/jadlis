@@ -57,7 +57,7 @@ describe("setupConversations", () => {
     setupConversations(mockBot as never);
 
     expect(mockConversations).toHaveBeenCalledTimes(1);
-    const opts = mockConversations.mock.calls[0][0];
+    const opts = (mockConversations.mock.calls[0] as any[])[0];
     expect(opts.storage).toBeDefined();
     expect(opts.storage.type).toBe("key");
     expect(opts.storage.adapter).toBeDefined();

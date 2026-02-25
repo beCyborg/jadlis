@@ -166,7 +166,7 @@ describe("PreToolUse hook", () => {
       { signal: new AbortController().signal },
     );
 
-    expect(result.permissionDecision).toBe("deny");
+    expect((result as any).hookSpecificOutput.permissionDecision).toBe("deny");
   });
 
   test("allows tool call when under rate limit", async () => {
@@ -179,7 +179,7 @@ describe("PreToolUse hook", () => {
       { signal: new AbortController().signal },
     );
 
-    expect(result.permissionDecision).toBe("allow");
+    expect((result as any).hookSpecificOutput.permissionDecision).toBe("allow");
   });
 
   test("increments call counter per invocation", async () => {
@@ -199,7 +199,7 @@ describe("PreToolUse hook", () => {
       "t4",
       { signal: new AbortController().signal },
     );
-    expect(result.permissionDecision).toBe("allow");
+    expect((result as any).hookSpecificOutput.permissionDecision).toBe("allow");
   });
 });
 
@@ -214,7 +214,7 @@ describe("PreToolUse hook — user_id validation", () => {
       { signal: new AbortController().signal },
     );
 
-    expect(result.permissionDecision).toBe("deny");
+    expect((result as any).hookSpecificOutput.permissionDecision).toBe("deny");
   });
 
   test("allows supabase tool call with user_id", async () => {
@@ -227,7 +227,7 @@ describe("PreToolUse hook — user_id validation", () => {
       { signal: new AbortController().signal },
     );
 
-    expect(result.permissionDecision).toBe("allow");
+    expect((result as any).hookSpecificOutput.permissionDecision).toBe("allow");
   });
 
   test("allows non-supabase tool call without user_id", async () => {
@@ -240,7 +240,7 @@ describe("PreToolUse hook — user_id validation", () => {
       { signal: new AbortController().signal },
     );
 
-    expect(result.permissionDecision).toBe("allow");
+    expect((result as any).hookSpecificOutput.permissionDecision).toBe("allow");
   });
 });
 
@@ -261,7 +261,7 @@ describe("PostToolUse hook", () => {
       { signal: new AbortController().signal },
     );
 
-    expect(result).toHaveProperty("hookEventName", "PostToolUse");
+    expect((result as any).hookSpecificOutput).toHaveProperty("hookEventName", "PostToolUse");
   });
 
   test("warns on cache miss (Issue #192)", async () => {

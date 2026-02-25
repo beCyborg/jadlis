@@ -26,7 +26,7 @@ describe("getRedisConnection", () => {
     const conn = getRedisConnection();
     expect(conn).toBeDefined();
     expect(MockIORedis).toHaveBeenCalledTimes(1);
-    expect(MockIORedis.mock.calls[0][0]).toBe("redis://test-host:6380");
+    expect((MockIORedis.mock.calls[0] as any[])[0]).toBe("redis://test-host:6380");
   });
 
   it("returns same instance on repeated calls (singleton)", () => {
@@ -38,19 +38,19 @@ describe("getRedisConnection", () => {
 
   it("sets maxRetriesPerRequest to null (BullMQ requirement)", () => {
     getRedisConnection();
-    const options = MockIORedis.mock.calls[0][1];
+    const options = (MockIORedis.mock.calls[0] as any[])[1];
     expect(options).toHaveProperty("maxRetriesPerRequest", null);
   });
 
   it("sets lazyConnect to true for cold-start resilience", () => {
     getRedisConnection();
-    const options = MockIORedis.mock.calls[0][1];
+    const options = (MockIORedis.mock.calls[0] as any[])[1];
     expect(options).toHaveProperty("lazyConnect", true);
   });
 
   it("uses default redis://localhost:6379 when REDIS_URL not set", () => {
     delete process.env.REDIS_URL;
     getRedisConnection();
-    expect(MockIORedis.mock.calls[0][0]).toBe("redis://localhost:6379");
+    expect((MockIORedis.mock.calls[0] as any[])[0]).toBe("redis://localhost:6379");
   });
 });

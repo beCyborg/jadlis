@@ -8,7 +8,11 @@
     "build": "bun run typecheck",
     "test": "bun test packages/*/src packages/*/test",
     "typecheck": "tsc --build",
-    "lint": "echo 'lint not configured'"
+    "lint": "echo 'lint not configured'",
+    "deploy": "railway up",
+    "deploy:detach": "railway up --detach",
+    "logs": "railway logs",
+    "ssh": "railway ssh"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
