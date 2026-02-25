@@ -50,15 +50,19 @@ export function createApp(deps: AppDeps) {
 
   // Bull Board (dev-only)
   if (process.env.NODE_ENV !== "production") {
-    import("@bull-board/api").then(({ createBullBoard, BullMQAdapter }) => {
-      import("@bull-board/hono").then(({ HonoAdapter }) => {
-        const serverAdapter = new HonoAdapter("/admin/queues");
-        createBullBoard({
-          queues: [new BullMQAdapter(getNotificationQueue())],
-          serverAdapter,
-        });
-        app.route("/admin/queues", serverAdapter.registerPlugin());
+    Promise.all([
+      import("@bull-board/api"),
+      import("@bull-board/api/dist/queueAdapters/bullMQ.js"),
+      import("@bull-board/hono"),
+      import("hono/bun"),
+    ]).then(([{ createBullBoard }, { BullMQAdapter }, { HonoAdapter }, { serveStatic }]) => {
+      const serverAdapter = new HonoAdapter(serveStatic);
+      serverAdapter.setBasePath("/admin/queues");
+      createBullBoard({
+        queues: [new BullMQAdapter(getNotificationQueue())],
+        serverAdapter,
       });
+      app.route("/admin/queues", serverAdapter.registerPlugin());
     });
   }
 

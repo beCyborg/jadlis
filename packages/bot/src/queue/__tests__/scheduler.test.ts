@@ -59,10 +59,10 @@ describe("scheduleUserNotifications", () => {
     });
 
     expect(mockQueueInstance.upsertJobScheduler).toHaveBeenCalledTimes(2);
-    const [schedulerId, opts] = mockQueueInstance.upsertJobScheduler.mock.calls[0];
-    expect(schedulerId).toBe("neuro-charge-123");
-    expect(opts.pattern).toBe("0 30 7 * * *");
-    expect(opts.tz).toBe("Europe/Moscow");
+    const call0 = mockQueueInstance.upsertJobScheduler.mock.calls[0] as unknown as [string, { pattern: string; tz: string }];
+    expect(call0[0]).toBe("neuro-charge-123");
+    expect(call0[1].pattern).toBe("0 30 7 * * *");
+    expect(call0[1].tz).toBe("Europe/Moscow");
   });
 
   it("creates evening cron job with user timezone", async () => {
@@ -73,10 +73,10 @@ describe("scheduleUserNotifications", () => {
       notifications_enabled: true,
     });
 
-    const [schedulerId, opts] = mockQueueInstance.upsertJobScheduler.mock.calls[1];
-    expect(schedulerId).toBe("evening-scanner-456");
-    expect(opts.pattern).toBe("0 15 22 * * *");
-    expect(opts.tz).toBe("Asia/Tokyo");
+    const call1 = mockQueueInstance.upsertJobScheduler.mock.calls[1] as unknown as [string, { pattern: string; tz: string }];
+    expect(call1[0]).toBe("evening-scanner-456");
+    expect(call1[1].pattern).toBe("0 15 22 * * *");
+    expect(call1[1].tz).toBe("Asia/Tokyo");
   });
 
   it("updates existing jobs (upsert, not duplicate)", async () => {
@@ -103,8 +103,8 @@ describe("cancelUserNotifications", () => {
   it("removes all jobs for user", async () => {
     await cancelUserNotifications(123);
     expect(mockQueueInstance.removeJobScheduler).toHaveBeenCalledTimes(2);
-    expect(mockQueueInstance.removeJobScheduler.mock.calls[0][0]).toBe("neuro-charge-123");
-    expect(mockQueueInstance.removeJobScheduler.mock.calls[1][0]).toBe("evening-scanner-123");
+    expect((mockQueueInstance.removeJobScheduler.mock.calls[0] as unknown as [string])[0]).toBe("neuro-charge-123");
+    expect((mockQueueInstance.removeJobScheduler.mock.calls[1] as unknown as [string])[0]).toBe("evening-scanner-123");
   });
 });
 

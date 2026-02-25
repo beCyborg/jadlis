@@ -24,7 +24,6 @@ function getFirecrawl(): FirecrawlApp {
 
 type McpResult = { content: { type: "text"; text: string }[]; isError?: boolean };
 
-// Strings (markdown) are returned as-is; other values are JSON-serialised.
 function ok(data: unknown): McpResult {
   return { content: [{ type: "text", text: typeof data === "string" ? data : JSON.stringify(data, null, 2) }] };
 }
@@ -39,9 +38,8 @@ function err(message: string): McpResult {
 
 export async function scrapePage(url: string): Promise<McpResult> {
   try {
-    const result = await getFirecrawl().scrapeUrl(url, { formats: ["markdown"] });
-    if (!result.success) return err("Scrape failed");
-    return ok(result.markdown ?? "");
+    const doc = await getFirecrawl().scrape(url, { formats: ["markdown"] });
+    return ok(doc.markdown ?? "");
   } catch (e: unknown) {
     return err(e instanceof Error ? e.message : String(e));
   }
@@ -51,10 +49,9 @@ export async function extractStructured(
   url: string, schema: Record<string, unknown>, prompt?: string,
 ): Promise<McpResult> {
   try {
-    const opts: { schema: Record<string, unknown>; prompt?: string } = { schema };
+    const opts: { urls: string[]; schema: Record<string, unknown>; prompt?: string } = { urls: [url], schema };
     if (prompt) opts.prompt = prompt;
-    const result = await getFirecrawl().extract([url], opts);
-    if (!result.success) return err("Extraction failed");
+    const result = await getFirecrawl().extract(opts);
     return ok(result.data);
   } catch (e: unknown) {
     return err(e instanceof Error ? e.message : String(e));
@@ -68,11 +65,11 @@ export async function batchExtract(
   for (const url of urls) {
     try {
       if (schema) {
-        const result = await getFirecrawl().extract([url], { schema });
-        results.push(result.success ? result.data : null);
+        const result = await getFirecrawl().extract({ urls: [url], schema });
+        results.push(result.data);
       } else {
-        const result = await getFirecrawl().scrapeUrl(url, { formats: ["markdown"] });
-        results.push(result.success ? result.markdown : null);
+        const doc = await getFirecrawl().scrape(url, { formats: ["markdown"] });
+        results.push(doc.markdown);
       }
     } catch {
       results.push(null);
