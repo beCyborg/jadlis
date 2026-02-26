@@ -1,10 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Habit } from "@jadlis/shared";
 
 /**
  * Finds or creates a habit by name for a user.
  * Returns the habit ID.
- *
- * Full implementation in section-08-data-integration.
  */
 export async function findOrCreateHabit(
   userId: string,
@@ -44,8 +43,6 @@ export async function findOrCreateHabit(
 
 /**
  * Logs a habit completion and triggers momentum update.
- *
- * Full implementation in section-08-data-integration.
  */
 export async function logHabitCompletion(
   habitId: string,
@@ -62,11 +59,68 @@ export async function logHabitCompletion(
     throw new Error(`Failed to log habit completion: ${error.message}`);
   }
 
-  // Trigger momentum update RPC
   const { error: rpcError } = await supabase.rpc("update_habit_momentum", {
     p_habit_id: habitId,
+    p_completed: true,
   });
   if (rpcError) {
     console.warn(`[habitService] Momentum RPC failed: ${rpcError.message}`);
   }
+}
+
+/**
+ * Fetches habits for today's review — only daily active habits.
+ */
+export async function getTodayHabits(
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<Habit[]> {
+  const { data, error } = await supabase
+    .from("habits")
+    .select()
+    .eq("user_id", userId)
+    .eq("frequency", "daily")
+    .eq("status", "active");
+
+  if (error) {
+    throw new Error(`Failed to get today's habits: ${error.message}`);
+  }
+
+  return (data ?? []) as Habit[];
+}
+
+export interface StreakInfo {
+  streaks: Record<string, number>;
+  longestStreak: number;
+}
+
+/**
+ * Returns current streak information for display in morning messages.
+ */
+export async function getStreakInfo(
+  userId: string,
+  supabase: SupabaseClient,
+): Promise<StreakInfo> {
+  const { data, error } = await supabase
+    .from("habits")
+    .select("id, streak")
+    .eq("user_id", userId)
+    .eq("status", "active");
+
+  if (error) {
+    throw new Error(`Failed to get streak info: ${error.message}`);
+  }
+
+  const habits = (data ?? []) as Array<{ id: string; streak: number }>;
+  const streaks: Record<string, number> = {};
+  let longestStreak = 0;
+
+  for (const h of habits) {
+    streaks[h.id] = h.streak;
+    if (h.streak > longestStreak) {
+      longestStreak = h.streak;
+    }
+  }
+
+  return { streaks, longestStreak };
 }
