@@ -1,29 +1,32 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-
-// Mock @jadlis/ai
-const mockEmbedText = mock(() => Promise.resolve([0.1, 0.2, 0.3]));
-const mockInvalidateCache = mock(() => Promise.resolve());
-const mockShouldTrigger = mock(() => Promise.resolve(false));
-const mockSummarize = mock(() => Promise.resolve());
-
-mock.module("@jadlis/ai", () => ({
-  embedText: mockEmbedText,
-  invalidateWorkingMemoryCache: mockInvalidateCache,
-  shouldTriggerEpisodeSummarization: mockShouldTrigger,
-  summarizeAndStoreEpisode: mockSummarize,
-}));
-
-// Mock @jadlis/shared
-mock.module("@jadlis/shared", () => ({
-  normalizeMetric: mock((_val: number, _config: unknown) => 75),
-}));
-
-const {
+import {
   METRIC_CODES,
   recordMorningMetric,
   updateWorkingMemoryAfterMorning,
   runPostEveningActions,
-} = await import("../memoryIntegration");
+  _setAiModuleForTest,
+  _resetAiModule,
+} from "../memoryIntegration";
+
+// Mock @jadlis/shared (normalizeMetric)
+mock.module("@jadlis/shared", () => ({
+  normalizeMetric: mock((_val: number, _config: unknown) => 75),
+}));
+
+// Mock AI functions (via DI, not mock.module for @jadlis/ai)
+const mockEmbedText = mock(() => Promise.resolve([0.1, 0.2, 0.3]));
+const mockInvalidateCache = mock(() => Promise.resolve());
+const mockShouldTrigger = mock(() => false);
+const mockSummarize = mock(() => Promise.resolve());
+
+function createMockAiModule() {
+  return {
+    embedText: mockEmbedText,
+    invalidateWorkingMemoryCache: mockInvalidateCache,
+    shouldTriggerEpisodeSummarization: mockShouldTrigger,
+    summarizeAndStoreEpisode: mockSummarize,
+  };
+}
 
 function createMockSupabase(overrides: Record<string, unknown> = {}) {
   const chain: Record<string, unknown> = {};
@@ -35,6 +38,8 @@ function createMockSupabase(overrides: Record<string, unknown> = {}) {
   chain.eq = mock(() => chain);
   chain.select = mock(() => chain);
   chain.insert = mock(() => terminal());
+  chain.order = mock(() => chain);
+  chain.limit = mock(() => chain);
 
   return {
     from: mock(() => chain),
@@ -48,6 +53,8 @@ describe("memoryIntegration", () => {
     mockInvalidateCache.mockClear();
     mockShouldTrigger.mockClear();
     mockSummarize.mockClear();
+    _resetAiModule();
+    _setAiModuleForTest(createMockAiModule());
   });
 
   describe("METRIC_CODES", () => {

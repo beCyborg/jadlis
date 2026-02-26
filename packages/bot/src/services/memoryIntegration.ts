@@ -1,12 +1,31 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NeuroBalanceZone } from "@jadlis/shared";
 import { normalizeMetric } from "@jadlis/shared";
-import {
-  embedText,
-  invalidateWorkingMemoryCache,
-  shouldTriggerEpisodeSummarization,
-  summarizeAndStoreEpisode,
-} from "@jadlis/ai";
+
+// ============================================================
+// Lazy AI module access (avoids Bun mock.module conflicts)
+// ============================================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _aiModule: any = null;
+
+function getAi() {
+  if (!_aiModule) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    _aiModule = require("@jadlis/ai");
+  }
+  return _aiModule;
+}
+
+/** @internal Test-only: inject mock AI module */
+export function _setAiModuleForTest(mod: unknown): void {
+  _aiModule = mod;
+}
+
+/** @internal Test-only: reset AI module singleton */
+export function _resetAiModule(): void {
+  _aiModule = null;
+}
 
 /**
  * Metric codes for morning ratings.
@@ -67,7 +86,8 @@ export async function updateWorkingMemoryAfterMorning(
   _zone: NeuroBalanceZone,
   _plan: string,
 ): Promise<void> {
-  await invalidateWorkingMemoryCache(userId);
+  const ai = getAi();
+  await ai.invalidateWorkingMemoryCache(userId);
 }
 
 /**
@@ -83,10 +103,12 @@ export async function runPostEveningActions(
   resistance: string,
   supabase: SupabaseClient,
 ): Promise<void> {
+  const ai = getAi();
+
   // 1. Embed highlights
   if (highlights.trim().length > 0) {
     try {
-      const embedding = await embedText(highlights, { inputType: "document" });
+      const embedding = await ai.embedText(highlights, { inputType: "document" });
       await supabase.from("jadlis_documents").insert({
         user_id: userId,
         content: highlights,
@@ -103,7 +125,7 @@ export async function runPostEveningActions(
   const trivial = ["нет", "-", "—", ""];
   if (resistance.trim().length > 20 && !trivial.includes(resistance.trim().toLowerCase())) {
     try {
-      const embedding = await embedText(resistance, { inputType: "document" });
+      const embedding = await ai.embedText(resistance, { inputType: "document" });
       await supabase.from("jadlis_documents").insert({
         user_id: userId,
         content: resistance,
@@ -117,7 +139,7 @@ export async function runPostEveningActions(
   }
 
   // 3. Invalidate working memory cache
-  await invalidateWorkingMemoryCache(userId);
+  await ai.invalidateWorkingMemoryCache(userId);
 
   // 4. Check episode summarization threshold
   try {
@@ -126,7 +148,7 @@ export async function runPostEveningActions(
       .select("*", { count: "exact", head: true })
       .eq("user_id", userId);
 
-    if (count !== null && shouldTriggerEpisodeSummarization(count)) {
+    if (count !== null && ai.shouldTriggerEpisodeSummarization(count)) {
       // Fetch recent messages for summarization
       const { data: messages } = await supabase
         .from("bot_sessions")
@@ -136,7 +158,7 @@ export async function runPostEveningActions(
         .limit(20);
 
       if (messages && messages.length > 0) {
-        await summarizeAndStoreEpisode(
+        await ai.summarizeAndStoreEpisode(
           userId,
           messages as Array<{ role: "user" | "assistant"; content: string }>,
         );
