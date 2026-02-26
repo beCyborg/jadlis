@@ -12,6 +12,7 @@ import {
 } from "@jadlis/ai";
 import type { ZoneDetermination } from "@jadlis/ai";
 import { normalizeMetric } from "@jadlis/shared";
+import type { ScaleConfig } from "@jadlis/shared";
 import type { NeuroBalanceZone } from "@jadlis/shared";
 import { supabase } from "../db";
 import { getOrCreateTodayRecord, updateDayField } from "../services/dayService";
@@ -50,7 +51,7 @@ async function generatePlan(
 ): Promise<string> {
   const workingMemory = await buildWorkingMemory(userId, chatId);
 
-  const { data: tasks } = await supabase
+  const { data: tasks, error: tasksError } = await supabase
     .from("tasks")
     .select("title, priority")
     .eq("user_id", userId)
@@ -58,19 +59,31 @@ async function generatePlan(
     .order("priority", { ascending: false })
     .limit(10);
 
-  const { data: habits } = await supabase
+  if (tasksError) {
+    console.error("[morningCheckin] Failed to fetch tasks:", tasksError);
+  }
+
+  const { data: habits, error: habitsError } = await supabase
     .from("habits")
     .select("name, momentum")
     .eq("user_id", userId)
     .eq("status", "active")
     .limit(10);
 
-  const { data: goals } = await supabase
+  if (habitsError) {
+    console.error("[morningCheckin] Failed to fetch habits:", habitsError);
+  }
+
+  const { data: goals, error: goalsError } = await supabase
     .from("goals")
     .select("title, deadline")
     .eq("user_id", userId)
     .eq("status", "active")
     .limit(5);
+
+  if (goalsError) {
+    console.error("[morningCheckin] Failed to fetch goals:", goalsError);
+  }
 
   const prompt = buildMorningPlanPrompt(
     zone,
@@ -130,15 +143,19 @@ export async function morningCheckin(
         .single();
 
       if (!metric) {
-        console.warn(`[morningCheckin] Metric ${code} not found for user ${userId}`);
+        console.warn(`[morningCheckin] Metric ${code} not found for user ${userId}, skipping insert`);
+        continue;
       }
 
-      const normalized = metric
-        ? normalizeMetric(value, { type: "P1", min: 1, max: 10 })
-        : null;
+      const scaleConfig: ScaleConfig = {
+        type: (metric.type as ScaleConfig["type"]) ?? "P1",
+        min: metric.min_value ?? 1,
+        max: metric.max_value ?? 10,
+      } as ScaleConfig;
+      const normalized = normalizeMetric(value, scaleConfig);
 
       const { error } = await supabase.from("metric_values").insert({
-        metric_id: metric?.id ?? null,
+        metric_id: metric.id,
         user_id: userId,
         raw_value: value,
         normalized_value: normalized,
@@ -236,9 +253,14 @@ export async function morningCheckin(
       const editCtx = await conversation.waitFor("message:text");
       const customInstruction = editCtx.message!.text;
 
-      finalPlan = await conversation.external(() =>
-        generatePlan(userId, chatId, zone, zoneLevel, customInstruction),
-      );
+      try {
+        finalPlan = await conversation.external(() =>
+          generatePlan(userId, chatId, zone, zoneLevel, customInstruction),
+        );
+      } catch (err) {
+        console.error("[morningCheckin] Plan edit regeneration failed:", err);
+        finalPlan = PLAN_UNAVAILABLE_MESSAGE;
+      }
 
       await sendConfirmKeyboard(ctx, `${header}\n${finalPlan}`);
     } else {

@@ -78,9 +78,21 @@ bot.on("message:text", handleText);
 // Error boundary — catch concurrent conversation attempts and unhandled errors
 bot.catch((err) => {
   const { ctx, error } = err;
-  if (error instanceof Error && error.message.includes("conversation")) {
-    ctx.reply("Ритуал уже активен. Завершите текущий или введите /cancel для отмены.").catch(() => {});
-    return;
+
+  // Detect concurrent conversation entry: grammY throws when entering
+  // a conversation while one is already active for this chat
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    const isConversationConflict =
+      msg.includes("already active") ||
+      msg.includes("cannot enter") ||
+      msg.includes("currently active");
+
+    if (isConversationConflict) {
+      ctx.reply("Ритуал уже активен. Завершите текущий или введите /cancel для отмены.").catch(() => {});
+      return;
+    }
   }
+
   console.error("[bot] Unhandled error:", error);
 });

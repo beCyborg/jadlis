@@ -90,12 +90,12 @@ export const SUGGEST_TASK_ACTIONS_TOOL: Anthropic.Messages.Tool = {
               type: "string",
               enum: ["transfer", "defer", "cancel"],
             },
-            reason: {
+            reasoning: {
               type: "string",
               description: "One sentence explanation",
             },
           },
-          required: ["taskId", "action", "reason"],
+          required: ["taskId", "action", "reasoning"],
         },
       },
     },
@@ -265,7 +265,7 @@ ${customInstruction ? `Пожелания пользователя: ${customInst
 
 /**
  * Builds prompt for AI to suggest actions for incomplete tasks.
- * Returns JSON: Array<{ taskId: string, action: "transfer"|"defer"|"cancel", reason: string }>
+ * Returns JSON: Array<{ taskId: string, action: "transfer"|"defer"|"cancel", reasoning: string }>
  */
 export function buildTaskTransferPrompt(
   incompleteTasks: Array<{ id: string; title: string }>,
@@ -290,8 +290,8 @@ ${tasksText}
 Контекст дня:
 ${dayContext}
 
-Ответь строго в JSON формате (1 предложение reason на задачу):
-[{"taskId": "...", "action": "transfer"|"defer"|"cancel", "reason": "..."}]`;
+Ответь строго в JSON формате (1 предложение reasoning на задачу):
+[{"taskId": "...", "action": "transfer"|"defer"|"cancel", "reasoning": "..."}]`;
 }
 
 /**

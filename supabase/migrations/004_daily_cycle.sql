@@ -1,6 +1,9 @@
 -- Migration: 004_daily_cycle
 -- Adds CHECK constraints for NeuroBalanceZone, TaskStatus, and Habit status
 
+-- 0. Add morning_plan column to days table
+ALTER TABLE days ADD COLUMN IF NOT EXISTS morning_plan TEXT;
+
 -- 1. CHECK constraint on days.zone for 7-zone NeuroBalanceZone values
 ALTER TABLE days
   ADD CONSTRAINT chk_days_zone

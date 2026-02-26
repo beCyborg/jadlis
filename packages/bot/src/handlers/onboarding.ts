@@ -6,8 +6,14 @@ import {
   scheduleUserNotifications,
   getUserSettingsFromRaw,
 } from "../queue/scheduler";
+import { isValidTimezone } from "@jadlis/shared";
 
-let _userRepo: UserRepository;
+let _userRepo: UserRepository | undefined;
+
+function getUserRepo(): UserRepository {
+  if (!_userRepo) throw new Error("initOnboarding() must be called before using onboarding handlers");
+  return _userRepo;
+}
 
 export function initOnboarding(userRepo: UserRepository): void {
   _userRepo = userRepo;
@@ -32,15 +38,6 @@ export async function startOnboarding(ctx: BotContext): Promise<void> {
         .text("Другой (ввести вручную)", "onboarding:tz_manual"),
     },
   );
-}
-
-function isValidTimezone(tz: string): boolean {
-  try {
-    Intl.DateTimeFormat(undefined, { timeZone: tz });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function handleOnboardingCallback(ctx: BotContext): Promise<void> {
@@ -134,10 +131,10 @@ async function saveAndSchedule(
   const telegramId = ctx.from?.id;
   if (!telegramId) return;
 
-  const user = await _userRepo.findByTelegramId(telegramId);
+  const user = await getUserRepo().findByTelegramId(telegramId);
   if (!user) return;
 
-  await _userRepo.updateSettings(user.id, settingsRaw);
+  await getUserRepo().updateSettings(user.id, settingsRaw);
 
   const settings = getUserSettingsFromRaw(settingsRaw);
   await scheduleUserNotifications(telegramId, telegramId, settings);

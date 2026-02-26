@@ -7,8 +7,14 @@ import {
   cancelUserNotifications,
   getUserSettingsFromRaw,
 } from "../queue/scheduler";
+import { isValidTimezone } from "@jadlis/shared";
 
-let _userRepo: UserRepository;
+let _userRepo: UserRepository | undefined;
+
+function getUserRepo(): UserRepository {
+  if (!_userRepo) throw new Error("initSettings() must be called before using settings handlers");
+  return _userRepo;
+}
 
 export function initSettings(userRepo: UserRepository): void {
   _userRepo = userRepo;
@@ -41,7 +47,7 @@ function settingsKeyboard(notificationsEnabled: boolean): IK {
 
 async function handleSettingsCommand(ctx: BotContext): Promise<void> {
   const userId = (ctx as AuthedContext).userId;
-  const user = await _userRepo.findById(userId);
+  const user = await getUserRepo().findById(userId);
 
   if (!user) {
     await ctx.reply("Пользователь не найден. Попробуй /start");
@@ -131,7 +137,7 @@ async function handleSettingsCallback(ctx: BotContext): Promise<void> {
   }
 
   if (data === "settings:toggle_notifications") {
-    const user = await _userRepo.findById(userId);
+    const user = await getUserRepo().findById(userId);
     if (!user) return;
 
     const current = getUserSettingsFromRaw(user.settings);
@@ -140,7 +146,7 @@ async function handleSettingsCallback(ctx: BotContext): Promise<void> {
     if (newEnabled) {
       await saveAndReschedule(ctx, userId, { notifications_enabled: true });
     } else {
-      await _userRepo.mergeSettings(userId, { notifications_enabled: false });
+      await getUserRepo().mergeSettings(userId, { notifications_enabled: false });
       const telegramId = Number(user.telegram_id);
       await cancelUserNotifications(telegramId);
 
@@ -150,15 +156,6 @@ async function handleSettingsCallback(ctx: BotContext): Promise<void> {
       });
     }
     return;
-  }
-}
-
-function isValidTimezone(tz: string): boolean {
-  try {
-    Intl.DateTimeFormat(undefined, { timeZone: tz });
-    return true;
-  } catch {
-    return false;
   }
 }
 
@@ -186,10 +183,10 @@ async function saveAndReschedule(
   userId: string,
   partial: Record<string, unknown>,
 ): Promise<void> {
-  const merged = await _userRepo.mergeSettings(userId, partial);
+  const merged = await getUserRepo().mergeSettings(userId, partial);
   if (!merged) return;
 
-  const user = await _userRepo.findById(userId);
+  const user = await getUserRepo().findById(userId);
   if (!user) return;
 
   const telegramId = Number(user.telegram_id);
