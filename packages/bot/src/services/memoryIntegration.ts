@@ -1,15 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NeuroBalanceZone } from "@jadlis/shared";
 import { normalizeMetric } from "@jadlis/shared";
-
-/**
- * Lazy import @jadlis/ai to avoid module mock conflicts in test suite.
- * These functions are used in fire-and-forget patterns, so the lazy import
- * cost is negligible.
- */
-async function getAiModule() {
-  return await import("@jadlis/ai");
-}
+import {
+  embedText,
+  invalidateWorkingMemoryCache,
+  shouldTriggerEpisodeSummarization,
+  summarizeAndStoreEpisode,
+} from "@jadlis/ai";
 
 /**
  * Metric codes for morning ratings.
@@ -70,7 +67,6 @@ export async function updateWorkingMemoryAfterMorning(
   _zone: NeuroBalanceZone,
   _plan: string,
 ): Promise<void> {
-  const { invalidateWorkingMemoryCache } = await getAiModule();
   await invalidateWorkingMemoryCache(userId);
 }
 
@@ -87,12 +83,10 @@ export async function runPostEveningActions(
   resistance: string,
   supabase: SupabaseClient,
 ): Promise<void> {
-  const ai = await getAiModule();
-
   // 1. Embed highlights
   if (highlights.trim().length > 0) {
     try {
-      const embedding = await ai.embedText(highlights, { inputType: "document" });
+      const embedding = await embedText(highlights, { inputType: "document" });
       await supabase.from("jadlis_documents").insert({
         user_id: userId,
         content: highlights,
@@ -109,7 +103,7 @@ export async function runPostEveningActions(
   const trivial = ["нет", "-", "—", ""];
   if (resistance.trim().length > 20 && !trivial.includes(resistance.trim().toLowerCase())) {
     try {
-      const embedding = await ai.embedText(resistance, { inputType: "document" });
+      const embedding = await embedText(resistance, { inputType: "document" });
       await supabase.from("jadlis_documents").insert({
         user_id: userId,
         content: resistance,
@@ -123,7 +117,7 @@ export async function runPostEveningActions(
   }
 
   // 3. Invalidate working memory cache
-  await ai.invalidateWorkingMemoryCache(userId);
+  await invalidateWorkingMemoryCache(userId);
 
   // 4. Check episode summarization threshold
   try {
@@ -132,7 +126,7 @@ export async function runPostEveningActions(
       .select("*", { count: "exact", head: true })
       .eq("user_id", userId);
 
-    if (count !== null && ai.shouldTriggerEpisodeSummarization(count)) {
+    if (count !== null && shouldTriggerEpisodeSummarization(count)) {
       // Fetch recent messages for summarization
       const { data: messages } = await supabase
         .from("bot_sessions")
@@ -142,7 +136,7 @@ export async function runPostEveningActions(
         .limit(20);
 
       if (messages && messages.length > 0) {
-        await ai.summarizeAndStoreEpisode(
+        await summarizeAndStoreEpisode(
           userId,
           messages as Array<{ role: "user" | "assistant"; content: string }>,
         );
