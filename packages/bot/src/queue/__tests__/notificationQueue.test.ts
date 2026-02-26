@@ -1,40 +1,5 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
-
-// Mock ioredis
-const mockRedis = { disconnect: mock(() => {}), connect: mock(() => Promise.resolve()), status: "ready" };
-mock.module("ioredis", () => ({ default: mock(() => mockRedis) }));
-
-// Mock bullmq
-const mockQueueInstance = {
-  add: mock(() => Promise.resolve()),
-  upsertJobScheduler: mock(() => Promise.resolve()),
-  removeJobScheduler: mock(() => Promise.resolve()),
-  getJobCounts: mock(() => Promise.resolve({})),
-};
-const MockQueue = mock(() => mockQueueInstance);
-
-const mockWorkerInstance = {
-  on: mock(() => mockWorkerInstance),
-  close: mock(() => Promise.resolve()),
-};
-let workerProcessor: ((job: unknown) => Promise<void>) | null = null;
-const MockWorker = mock((name: string, processor: (job: unknown) => Promise<void>, opts: unknown) => {
-  workerProcessor = processor;
-  return mockWorkerInstance;
-});
-
-const MockUnrecoverableError = class extends Error {
-  constructor(msg: string) {
-    super(msg);
-    this.name = "UnrecoverableError";
-  }
-};
-
-mock.module("bullmq", () => ({
-  Queue: MockQueue,
-  Worker: MockWorker,
-  UnrecoverableError: MockUnrecoverableError,
-}));
+import { _getLastWorkerProcessor } from "../../../../../tests/preload";
 
 const { createNotificationWorker, QUEUE_NAME, _resetQueue } = await import("../notificationQueue");
 const { resetRedisConnection } = await import("../connection");
@@ -54,20 +19,19 @@ describe("createNotificationWorker", () => {
     mockBotApi = {
       sendMessage: mock(() => Promise.resolve()),
     };
-    MockWorker.mockClear();
   });
 
   it("accepts botApi as dependency (no circular import)", () => {
     const worker = createNotificationWorker(mockBotApi as never);
     expect(worker).toBeDefined();
-    expect(MockWorker).toHaveBeenCalledTimes(1);
   });
 
   it("routes neuro-charge job to sendMessage with correct keyboard", async () => {
     createNotificationWorker(mockBotApi as never);
-    expect(workerProcessor).not.toBeNull();
+    const processor = _getLastWorkerProcessor();
+    expect(processor).not.toBeNull();
 
-    await workerProcessor!({
+    await processor!({
       data: { userId: 123, chatId: 456, type: "neuro-charge" },
     });
 
@@ -82,8 +46,9 @@ describe("createNotificationWorker", () => {
 
   it("routes evening-scanner job to sendMessage with correct keyboard", async () => {
     createNotificationWorker(mockBotApi as never);
+    const processor = _getLastWorkerProcessor();
 
-    await workerProcessor!({
+    await processor!({
       data: { userId: 123, chatId: 456, type: "evening-scanner" },
     });
 
@@ -95,8 +60,9 @@ describe("createNotificationWorker", () => {
 
   it("routes morning-checkin job to sendMessage with correct keyboard", async () => {
     createNotificationWorker(mockBotApi as never);
+    const processor = _getLastWorkerProcessor();
 
-    await workerProcessor!({
+    await processor!({
       data: { userId: 123, chatId: 456, type: "morning-checkin" },
     });
 
@@ -107,8 +73,9 @@ describe("createNotificationWorker", () => {
 
   it("routes reminder job to sendMessage with reminder text", async () => {
     createNotificationWorker(mockBotApi as never);
+    const processor = _getLastWorkerProcessor();
 
-    await workerProcessor!({
+    await processor!({
       data: { userId: 123, chatId: 456, type: "reminder", reminderNumber: 1 },
     });
 
@@ -124,9 +91,10 @@ describe("createNotificationWorker", () => {
     });
 
     createNotificationWorker(mockBotApi as never);
+    const processor = _getLastWorkerProcessor();
 
     try {
-      await workerProcessor!({
+      await processor!({
         data: { userId: 123, chatId: 456, type: "neuro-charge" },
       });
       expect(true).toBe(false); // should not reach
@@ -143,9 +111,10 @@ describe("createNotificationWorker", () => {
     });
 
     createNotificationWorker(mockBotApi as never);
+    const processor = _getLastWorkerProcessor();
 
     try {
-      await workerProcessor!({
+      await processor!({
         data: { userId: 123, chatId: 456, type: "neuro-charge" },
       });
       expect(true).toBe(false);
