@@ -15,6 +15,7 @@ import { handleText } from "./handlers/text";
 import { registerNeuroChargeHandlers } from "./handlers/neuroCharge";
 import { registerSettingsHandler, handleSettingsText, initSettings } from "./handlers/settings";
 import { registerOnboardingHandler, handleOnboardingText, initOnboarding } from "./handlers/onboarding";
+import { handleMorningCommand, handleEveningCommand } from "./handlers/manualTriggers";
 import { supabase } from "./db";
 import { UserRepository } from "./repositories/userRepository";
 
@@ -61,6 +62,8 @@ bot.command("help", handleHelp);
 bot.command("status", createStatusHandler(supabase));
 bot.command("goals", createGoalsHandler(supabase));
 bot.command("habits", createHabitsHandler(supabase));
+bot.command("morning", handleMorningCommand);
+bot.command("evening", handleEveningCommand);
 
 // Callback queries
 registerNeuroChargeHandlers(bot);
@@ -71,3 +74,13 @@ registerOnboardingHandler(bot);
 bot.on("message:text", handleOnboardingText);
 bot.on("message:text", handleSettingsText);
 bot.on("message:text", handleText);
+
+// Error boundary — catch concurrent conversation attempts and unhandled errors
+bot.catch((err) => {
+  const { ctx, error } = err;
+  if (error instanceof Error && error.message.includes("conversation")) {
+    ctx.reply("Ритуал уже активен. Завершите текущий или введите /cancel для отмены.").catch(() => {});
+    return;
+  }
+  console.error("[bot] Unhandled error:", error);
+});

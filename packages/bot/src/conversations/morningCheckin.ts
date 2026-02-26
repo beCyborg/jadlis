@@ -11,10 +11,11 @@ import {
   invalidateWorkingMemoryCache,
 } from "@jadlis/ai";
 import type { ZoneDetermination } from "@jadlis/ai";
-import { normalizeMetric, levelToZone } from "@jadlis/shared";
+import { normalizeMetric } from "@jadlis/shared";
 import type { NeuroBalanceZone } from "@jadlis/shared";
 import { supabase } from "../db";
 import { getOrCreateTodayRecord, updateDayField } from "../services/dayService";
+import { fallbackZoneDetermination, PLAN_UNAVAILABLE_MESSAGE } from "../utils/aiFallbacks";
 
 const ZONE_EMOJIS: Record<NeuroBalanceZone, string> = {
   crisis: "\u{1F534}",
@@ -181,9 +182,9 @@ export async function morningCheckin(
     zoneLevel = result.zoneLevel;
   } catch (err) {
     console.warn("[morningCheckin] Zone AI failed, using formula fallback:", err);
-    const avg = (physical + emotional + energy) / 3;
-    zoneLevel = Math.round((avg * 7) / 10);
-    zone = levelToZone(zoneLevel);
+    const fallback = fallbackZoneDetermination(physical, emotional, energy);
+    zone = fallback.zone;
+    zoneLevel = fallback.zoneLevel;
   }
 
   // ── 6. Plan generation ────────────────────────────────────
@@ -202,7 +203,7 @@ export async function morningCheckin(
     });
     ctx.session.step = "idle";
     ctx.session.current_ritual = null;
-    await ctx.reply("\u0410\u0049-\u0430\u043D\u0430\u043B\u0438\u0437 \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D. \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 /status \u0434\u043B\u044F \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0430 \u0437\u0430\u0434\u0430\u0447.");
+    await ctx.reply(PLAN_UNAVAILABLE_MESSAGE);
     return;
   }
 

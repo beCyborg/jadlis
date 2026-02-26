@@ -22,6 +22,7 @@ import {
   appendHighlight,
   getOrCreateTodayRecord,
 } from "../services/dayService";
+import { fallbackTaskTransfer } from "../utils/aiFallbacks";
 import {
   getTodayTasks,
   updateTaskStatus,
@@ -188,24 +189,19 @@ export async function eveningScanner(
   const incompleteTasks = displayedTasks.filter((t) => !completedTaskIds.includes(t.id));
 
   if (incompleteTasks.length > 0) {
-    const suggestionsRaw = await conversation.external(async () => {
-      const prompt = buildTaskTransferPrompt(
-        incompleteTasks.map((t) => ({ id: t.id, title: t.title })),
-        `Оценка дня: ${score}/10`,
-      );
-      return createMessage(prompt, { maxTokens: 1024 });
+    const suggestions = await conversation.external(async (): Promise<Array<{ taskId: string; action: string; reasoning: string }>> => {
+      try {
+        const prompt = buildTaskTransferPrompt(
+          incompleteTasks.map((t) => ({ id: t.id, title: t.title })),
+          `Оценка дня: ${score}/10`,
+        );
+        const raw = await createMessage(prompt, { maxTokens: 1024 });
+        return JSON.parse(raw);
+      } catch (err) {
+        console.warn("[eveningScanner] Task transfer AI failed, using fallback:", err);
+        return fallbackTaskTransfer(incompleteTasks);
+      }
     });
-
-    let suggestions: Array<{ taskId: string; action: string; reasoning: string }>;
-    try {
-      suggestions = JSON.parse(suggestionsRaw);
-    } catch {
-      suggestions = incompleteTasks.map((t) => ({
-        taskId: t.id,
-        action: "transfer",
-        reasoning: "Рекомендация по умолчанию",
-      }));
-    }
 
     for (const suggestion of suggestions) {
       const task = incompleteTasks.find((t) => t.id === suggestion.taskId);
@@ -350,27 +346,26 @@ export async function eveningScanner(
     };
   });
 
-  const planResult = await conversation.external(async () => {
-    const prompt = buildTomorrowPlanPrompt(
-      transferredTasks,
-      planContext.activeGoals,
-      planContext.workingMemory,
-      planContext.recentHighlights,
-      planContext.todayZone,
-    );
-    return createMessage(prompt, { maxTokens: 2048 });
+  const parsed = await conversation.external(async (): Promise<{ plan: string; tasks: Array<{ title: string; priority: "high" | "medium" | "low" }>; joyTask: { title: string; reasoning: string } }> => {
+    try {
+      const prompt = buildTomorrowPlanPrompt(
+        transferredTasks,
+        planContext.activeGoals,
+        planContext.workingMemory,
+        planContext.recentHighlights,
+        planContext.todayZone,
+      );
+      const raw = await createMessage(prompt, { maxTokens: 2048 });
+      return JSON.parse(raw);
+    } catch (err) {
+      console.warn("[eveningScanner] Tomorrow plan AI failed, using fallback:", err);
+      return {
+        plan: "AI-план временно недоступен. Задачи перенесены автоматически.",
+        tasks: [] as Array<{ title: string; priority: "high" | "medium" | "low" }>,
+        joyTask: { title: "Приятная прогулка", reasoning: "Время для себя" },
+      };
+    }
   });
-
-  let parsed: { plan: string; tasks: Array<{ title: string; priority: "high" | "medium" | "low" }>; joyTask: { title: string; reasoning: string } };
-  try {
-    parsed = JSON.parse(planResult);
-  } catch {
-    parsed = {
-      plan: planResult,
-      tasks: [],
-      joyTask: { title: "Приятная прогулка", reasoning: "Время для себя" },
-    };
-  }
 
   // Show plan
   await ctx.reply(`План на завтра:\n\n${parsed.plan}\n\nРадость дня: ${parsed.joyTask.title}`, {
