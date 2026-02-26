@@ -1,13 +1,11 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
-
-const { _setConnectionForTest } = await import("../connection");
-const { _resetQueue, _setQueueForTest } = await import("../notificationQueue");
-const {
+import { _resetQueue, _setQueueForTest } from "../notificationQueue";
+import {
   scheduleUserNotifications,
   cancelUserNotifications,
   reconcileAllSchedules,
   getUserSettingsFromRaw,
-} = await import("../scheduler");
+} from "../scheduler";
 
 // Mock queue instance (injected via _setQueueForTest)
 const mockQueueInstance = {
@@ -16,13 +14,6 @@ const mockQueueInstance = {
   removeJobScheduler: mock(() => Promise.resolve()),
   getJobCounts: mock(() => Promise.resolve({})),
   getJob: mock(() => Promise.resolve(null)),
-};
-
-// Mock Redis connection (injected via _setConnectionForTest)
-const mockRedis = {
-  disconnect: mock(() => {}),
-  connect: mock(() => Promise.resolve()),
-  status: "ready",
 };
 
 describe("getUserSettingsFromRaw", () => {
@@ -47,7 +38,6 @@ describe("getUserSettingsFromRaw", () => {
 
 describe("scheduleUserNotifications", () => {
   beforeEach(() => {
-    _setConnectionForTest(mockRedis);
     _resetQueue();
     _setQueueForTest(mockQueueInstance);
     mockQueueInstance.upsertJobScheduler.mockClear();
@@ -98,7 +88,6 @@ describe("scheduleUserNotifications", () => {
 
 describe("cancelUserNotifications", () => {
   beforeEach(() => {
-    _setConnectionForTest(mockRedis);
     _resetQueue();
     _setQueueForTest(mockQueueInstance);
     mockQueueInstance.removeJobScheduler.mockClear();
@@ -114,7 +103,6 @@ describe("cancelUserNotifications", () => {
 
 describe("reconcileAllSchedules", () => {
   beforeEach(() => {
-    _setConnectionForTest(mockRedis);
     _resetQueue();
     _setQueueForTest(mockQueueInstance);
     mockQueueInstance.upsertJobScheduler.mockClear();
