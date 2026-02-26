@@ -41,8 +41,10 @@ jobs:
         # timeout sends SIGTERM after 180s; tests finish in ~20s,
         # so 124 exit code means "tests passed, process hung".
         run: |
+          set +e
           timeout 180 bun run test --bail
           EXIT=$?
+          set -e
           if [ $EXIT -eq 124 ]; then
             echo "::warning::bun test hung after completion — killed by timeout (open handles)"
             exit 0
