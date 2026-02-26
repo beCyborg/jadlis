@@ -1,13 +1,6 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
-import { _resetQueue, _setQueueForTest } from "../notificationQueue";
-import {
-  scheduleUserNotifications,
-  cancelUserNotifications,
-  reconcileAllSchedules,
-  getUserSettingsFromRaw,
-} from "../scheduler";
 
-// Mock queue instance (injected via _setQueueForTest)
+// Mock queue instance — mock.module to intercept getNotificationQueue globally
 const mockQueueInstance = {
   add: mock(() => Promise.resolve()),
   upsertJobScheduler: mock(() => Promise.resolve()),
@@ -15,6 +8,21 @@ const mockQueueInstance = {
   getJobCounts: mock(() => Promise.resolve({})),
   getJob: mock(() => Promise.resolve(null)),
 };
+
+mock.module("../notificationQueue", () => ({
+  QUEUE_NAME: "jadlis-notifications",
+  getNotificationQueue: () => mockQueueInstance,
+  createNotificationQueue: () => mockQueueInstance,
+  _resetQueue: () => {},
+  _setQueueForTest: () => {},
+}));
+
+const {
+  scheduleUserNotifications,
+  cancelUserNotifications,
+  reconcileAllSchedules,
+  getUserSettingsFromRaw,
+} = await import("../scheduler");
 
 describe("getUserSettingsFromRaw", () => {
   it("returns defaults for null input", () => {
@@ -38,8 +46,6 @@ describe("getUserSettingsFromRaw", () => {
 
 describe("scheduleUserNotifications", () => {
   beforeEach(() => {
-    _resetQueue();
-    _setQueueForTest(mockQueueInstance);
     mockQueueInstance.upsertJobScheduler.mockClear();
   });
 
@@ -88,8 +94,6 @@ describe("scheduleUserNotifications", () => {
 
 describe("cancelUserNotifications", () => {
   beforeEach(() => {
-    _resetQueue();
-    _setQueueForTest(mockQueueInstance);
     mockQueueInstance.removeJobScheduler.mockClear();
   });
 
@@ -103,8 +107,6 @@ describe("cancelUserNotifications", () => {
 
 describe("reconcileAllSchedules", () => {
   beforeEach(() => {
-    _resetQueue();
-    _setQueueForTest(mockQueueInstance);
     mockQueueInstance.upsertJobScheduler.mockClear();
   });
 
