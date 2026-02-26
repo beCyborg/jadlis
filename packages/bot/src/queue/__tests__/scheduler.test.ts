@@ -1,10 +1,14 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { _setConnectionForTest } from "../connection";
+import { _resetQueue, _setQueueForTest } from "../notificationQueue";
+import {
+  scheduleUserNotifications,
+  cancelUserNotifications,
+  reconcileAllSchedules,
+  getUserSettingsFromRaw,
+} from "../scheduler";
 
-// Mock ioredis
-const mockRedis = { disconnect: mock(() => {}), connect: mock(() => Promise.resolve()), status: "ready" };
-mock.module("ioredis", () => ({ default: mock(() => mockRedis) }));
-
-// Mock bullmq Queue
+// Mock queue instance (injected via _setQueueForTest)
 const mockQueueInstance = {
   add: mock(() => Promise.resolve()),
   upsertJobScheduler: mock(() => Promise.resolve()),
@@ -12,21 +16,13 @@ const mockQueueInstance = {
   getJobCounts: mock(() => Promise.resolve({})),
   getJob: mock(() => Promise.resolve(null)),
 };
-mock.module("bullmq", () => ({
-  Queue: mock(() => mockQueueInstance),
-  Worker: mock(() => ({ on: mock(() => ({})) })),
-  UnrecoverableError: class extends Error {},
-}));
 
-const {
-  scheduleUserNotifications,
-  cancelUserNotifications,
-  reconcileAllSchedules,
-  getUserSettingsFromRaw,
-} = await import("../scheduler");
-
-const { _resetQueue } = await import("../notificationQueue");
-const { resetRedisConnection } = await import("../connection");
+// Mock Redis connection (injected via _setConnectionForTest)
+const mockRedis = {
+  disconnect: mock(() => {}),
+  connect: mock(() => Promise.resolve()),
+  status: "ready",
+};
 
 describe("getUserSettingsFromRaw", () => {
   it("returns defaults for null input", () => {
@@ -50,8 +46,9 @@ describe("getUserSettingsFromRaw", () => {
 
 describe("scheduleUserNotifications", () => {
   beforeEach(() => {
-    resetRedisConnection();
+    _setConnectionForTest(mockRedis);
     _resetQueue();
+    _setQueueForTest(mockQueueInstance);
     mockQueueInstance.upsertJobScheduler.mockClear();
   });
 
@@ -85,7 +82,6 @@ describe("scheduleUserNotifications", () => {
   });
 
   it("updates existing jobs (upsert, not duplicate)", async () => {
-    // Call twice for same user
     const settings = {
       timezone: "UTC",
       morning_neuro_charge_time: "08:00",
@@ -95,15 +91,15 @@ describe("scheduleUserNotifications", () => {
     await scheduleUserNotifications(789, 789, settings);
     await scheduleUserNotifications(789, 789, { ...settings, morning_neuro_charge_time: "09:00" });
 
-    // All calls use upsertJobScheduler (idempotent)
     expect(mockQueueInstance.upsertJobScheduler).toHaveBeenCalledTimes(4);
   });
 });
 
 describe("cancelUserNotifications", () => {
   beforeEach(() => {
-    resetRedisConnection();
+    _setConnectionForTest(mockRedis);
     _resetQueue();
+    _setQueueForTest(mockQueueInstance);
     mockQueueInstance.removeJobScheduler.mockClear();
   });
 
@@ -117,8 +113,9 @@ describe("cancelUserNotifications", () => {
 
 describe("reconcileAllSchedules", () => {
   beforeEach(() => {
-    resetRedisConnection();
+    _setConnectionForTest(mockRedis);
     _resetQueue();
+    _setQueueForTest(mockQueueInstance);
     mockQueueInstance.upsertJobScheduler.mockClear();
   });
 
@@ -142,7 +139,6 @@ describe("reconcileAllSchedules", () => {
     };
 
     await reconcileAllSchedules(mockSupabase as never);
-    // 2 users × 2 schedulers each = 4 calls
     expect(mockQueueInstance.upsertJobScheduler).toHaveBeenCalledTimes(4);
   });
 
@@ -165,7 +161,6 @@ describe("reconcileAllSchedules", () => {
     };
 
     await reconcileAllSchedules(mockSupabase as never);
-    // 1 user × 2 schedulers = 2 calls
     expect(mockQueueInstance.upsertJobScheduler).toHaveBeenCalledTimes(2);
   });
 
@@ -187,7 +182,6 @@ describe("reconcileAllSchedules", () => {
 
     await reconcileAllSchedules(mockSupabase as never);
     await reconcileAllSchedules(mockSupabase as never);
-    // Uses upsertJobScheduler → idempotent
     expect(mockQueueInstance.upsertJobScheduler).toHaveBeenCalledTimes(4);
   });
 });

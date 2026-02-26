@@ -75,6 +75,11 @@ export function _resetClients(): void {
   _supabase = null;
 }
 
+/** @internal Test-only: inject mock Voyage client */
+export function _setVoyageClientForTest(client: unknown): void {
+  _voyageClient = client as VoyageAIClient;
+}
+
 // ============================================================
 // Token estimation
 // ============================================================

@@ -49,3 +49,8 @@ export function resetRedisConnection(): void {
     connection = null;
   }
 }
+
+/** @internal Test-only: inject mock connection */
+export function _setConnectionForTest(conn: unknown): void {
+  connection = conn as IORedis;
+}

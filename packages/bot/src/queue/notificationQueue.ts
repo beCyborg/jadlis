@@ -92,6 +92,11 @@ export function _resetQueue(): void {
   queueInstance = null;
 }
 
+/** @internal Test-only: inject mock queue */
+export function _setQueueForTest(queue: unknown): void {
+  queueInstance = queue as Queue<NotificationJobData>;
+}
+
 /**
  * Creates a BullMQ Worker with botApi injected (DI pattern).
  * Worker does NOT import bot.ts — avoids circular imports.
