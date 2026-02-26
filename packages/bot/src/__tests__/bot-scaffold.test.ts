@@ -239,7 +239,7 @@ describe("Commands", () => {
   test("/start creates new user when not in DB", async () => {
     const { createStartHandler } = await import("../handlers/start");
     let insertedData: any = null;
-    let repliedWith = "";
+    const replies: string[] = [];
     const mockSupabase = {
       from: () => ({
         select: () => ({
@@ -256,14 +256,15 @@ describe("Commands", () => {
     const handler = createStartHandler(mockSupabase as any);
     const mockCtx = {
       from: { id: 12345, username: "testuser" },
-      reply: async (msg: string) => {
-        repliedWith = msg;
+      reply: async (msg: string, _opts?: any) => {
+        replies.push(msg);
       },
+      session: {} as any,
     };
     await handler(mockCtx as any);
     expect(insertedData).toBeDefined();
     expect(insertedData.telegram_id).toBe(12345);
-    expect(repliedWith).toContain("Jadlis");
+    expect(replies[0]).toContain("Jadlis");
   });
 
   test("/start sends welcome message for existing user", async () => {

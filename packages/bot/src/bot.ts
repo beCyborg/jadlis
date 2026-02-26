@@ -13,7 +13,10 @@ import { createGoalsHandler } from "./handlers/goals";
 import { createHabitsHandler } from "./handlers/habits";
 import { handleText } from "./handlers/text";
 import { registerNeuroChargeHandlers } from "./handlers/neuroCharge";
+import { registerSettingsHandler, handleSettingsText, initSettings } from "./handlers/settings";
+import { registerOnboardingHandler, handleOnboardingText, initOnboarding } from "./handlers/onboarding";
 import { supabase } from "./db";
+import { UserRepository } from "./repositories/userRepository";
 
 export type SessionData = {
   step: string;
@@ -23,6 +26,10 @@ export type SessionData = {
   working_memory_cache: string;
   working_memory_updated_at: string | null;
   message_count: number;
+  onboarding_step?: "timezone" | "morning_time" | "evening_time" | "timezone_manual_input" | "done";
+  onboarding_timezone?: string;
+  onboarding_morning?: string;
+  settings_awaiting_tz?: boolean;
 };
 
 export type BotContext = Context &
@@ -33,6 +40,11 @@ export type BotContext = Context &
 export type AuthedContext = BotContext & { userId: string };
 
 export const bot = new Bot<BotContext>(process.env.BOT_TOKEN!);
+
+// Initialize repositories for handlers
+const userRepo = new UserRepository(supabase);
+initSettings(userRepo);
+initOnboarding(userRepo);
 
 // Middleware chain (order is critical):
 // error → logger → session → conversations → dedup → auth → handlers
@@ -52,6 +64,10 @@ bot.command("habits", createHabitsHandler(supabase));
 
 // Callback queries
 registerNeuroChargeHandlers(bot);
+registerSettingsHandler(bot);
+registerOnboardingHandler(bot);
 
-// Text messages
+// Text messages (onboarding/settings text handlers run first, fall through to generic)
+bot.on("message:text", handleOnboardingText);
+bot.on("message:text", handleSettingsText);
 bot.on("message:text", handleText);
