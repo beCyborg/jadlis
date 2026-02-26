@@ -13,6 +13,13 @@
  */
 import { mock } from "bun:test";
 
+// Bun test has no --forceExit flag. Open handles from leaked mocks
+// or real connections prevent process exit. Force exit after 60s —
+// all tests complete in ~20s, so this is a generous safety net.
+setTimeout(() => {
+  process.exit(process.exitCode ?? 0);
+}, 60_000);
+
 mock.module("ioredis", () => ({
   default: class MockIORedis {
     _url: string;
