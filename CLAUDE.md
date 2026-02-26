@@ -16,10 +16,14 @@ packages/
 
 ## Команды
 
-bun install          # Установка зависимостей
-bun run typecheck    # TypeScript typecheck всех пакетов
-bun test             # Запуск тестов (bun:test)
-bun run dev          # Локальный запуск с hot reload
+tsc --build          # Typecheck (ЕДИНСТВЕННАЯ локальная команда)
+
+### ЗАПРЕТ: НЕ запускать bun локально
+НЕ использовать `bun test`, `bun run dev`, `bun install` на локальной машине.
+Bun 1.3.x memory leak → 28+ ГБ RAM. Вместо этого:
+- **Typecheck**: `tsc --build` (локально)
+- **Тесты**: CI (GitHub Actions) при push
+- **Dev/Deploy**: Railway MCP → `deploy` + `get-logs`
 
 ## Стандарты кода
 

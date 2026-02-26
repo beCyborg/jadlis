@@ -23,12 +23,35 @@ export const ZONE_LEVEL: Record<NeuroBalanceZone, number> = {
   superflow: 7,
 };
 
+/** Ordered zone list — index+1 = zone level (1-7). */
+export const ZONE_ORDER: readonly NeuroBalanceZone[] = [
+  "crisis",
+  "exhaustion",
+  "decline",
+  "stable",
+  "rise",
+  "flow",
+  "superflow",
+] as const;
+
+/** Convert 1-7 level to zone name. Clamps to valid range. */
+export function levelToZone(level: number): NeuroBalanceZone {
+  const clamped = Math.max(1, Math.min(7, Math.round(level)));
+  return ZONE_ORDER[clamped - 1];
+}
+
+/** Convert zone name to 1-7 level. */
+export function zoneToLevel(zone: NeuroBalanceZone): number {
+  return ZONE_ORDER.indexOf(zone) + 1;
+}
+
 export interface DayRecord {
   id: string;
   user_id: string;
   date: string;
   overall_score: number | null;
   zone: NeuroBalanceZone | null;
+  morning_plan: string | null;
   highlights: unknown[];
   ai_summary: string | null;
   created_at: string;

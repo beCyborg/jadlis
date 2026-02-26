@@ -31,7 +31,7 @@ export async function sendRatingKeyboard(
  * Answers the callback query automatically.
  */
 export async function waitForRating(
-  conversation: Conversation<BotContext>,
+  conversation: Conversation<BotContext, BotContext>,
   prefix: string,
 ): Promise<number> {
   const ctx = await conversation.waitForCallbackQuery(
@@ -72,7 +72,7 @@ export async function sendConfirmKeyboard(
  * Caps at 10 items displayed.
  */
 export async function sendMultiSelectKeyboard(
-  conversation: Conversation<BotContext>,
+  conversation: Conversation<BotContext, BotContext>,
   ctx: BotContext,
   items: Array<{ id: string; label: string }>,
   prefix: string,

@@ -1,10 +1,29 @@
 // @jadlis/ai — Claude API, Agent SDK, Memory, Embeddings
 export {
   createMessage,
+  createMessageWithTools,
   classifyIntent,
   type IntentType,
   type ClassifiedIntent,
 } from "./claude";
+
+export {
+  buildZonePrompt,
+  buildMorningPlanPrompt,
+  buildTaskTransferPrompt,
+  buildTomorrowPlanPrompt,
+  buildDaySummaryPrompt,
+  DETERMINE_ZONE_TOOL,
+  SUGGEST_TASK_ACTIONS_TOOL,
+  PLAN_TOMORROW_TOOL,
+  ZONE_DISPLAY,
+  ZONE_PROMPT_CACHEABLE,
+  MORNING_PLAN_PROMPT_CACHEABLE,
+  TOMORROW_PLAN_PROMPT_CACHEABLE,
+  TASK_TRANSFER_PROMPT_CACHEABLE,
+  DAY_SUMMARY_PROMPT_CACHEABLE,
+  type ZoneDetermination,
+} from "./prompts/dailyCycle";
 
 export {
   embedText,
