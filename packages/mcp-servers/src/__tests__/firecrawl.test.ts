@@ -12,23 +12,25 @@ let mockExtractCalls: any[] = [];
 mock.module("@mendable/firecrawl-js", () => ({
   default: class MockFirecrawlApp {
     constructor(_opts: any) {}
-    scrapeUrl = async (url: string, opts?: any) => {
+    scrape = async (url: string, opts?: any) => {
       mockScrapeCalls.push({ url, opts });
       return mockScrapeResult;
     };
-    extract = async (urls: string[], opts?: any) => {
-      mockExtractCalls.push({ urls, opts });
+    extract = async (opts?: any) => {
+      mockExtractCalls.push(opts);
       return mockExtractResult;
     };
   },
 }));
 
-beforeEach(() => {
+beforeEach(async () => {
   mockScrapeResult = { success: true, markdown: "# Test Page\nContent here." };
   mockExtractResult = { success: true, data: { title: "Test", value: 42 } };
   mockScrapeCalls = [];
   mockExtractCalls = [];
   process.env.FIRECRAWL_API_KEY = "test-firecrawl-key";
+  const { _resetFirecrawl } = await import("../firecrawl/index");
+  _resetFirecrawl();
 });
 
 // ============================================================
@@ -60,7 +62,7 @@ describe("jadlis-firecrawl MCP — extract_structured", () => {
     await extractStructured("https://example.com", schema);
 
     expect(mockExtractCalls.length).toBe(1);
-    expect(mockExtractCalls[0].opts.schema).toEqual(schema);
+    expect(mockExtractCalls[0].schema).toEqual(schema);
   });
 
   test("returns object that matches provided JSON schema", async () => {

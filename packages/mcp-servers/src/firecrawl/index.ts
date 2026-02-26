@@ -18,6 +18,11 @@ function getFirecrawl(): FirecrawlApp {
   return _firecrawl;
 }
 
+/** Reset cached client (for testing). */
+export function _resetFirecrawl(): void {
+  _firecrawl = null;
+}
+
 // ============================================================
 // MCP response helpers
 // ============================================================

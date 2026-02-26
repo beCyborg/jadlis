@@ -1,7 +1,7 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
 
 // Mock ioredis
-const mockRedis = { disconnect: mock(() => {}), status: "ready" };
+const mockRedis = { disconnect: mock(() => {}), connect: mock(() => Promise.resolve()), status: "ready" };
 mock.module("ioredis", () => ({ default: mock(() => mockRedis) }));
 
 // Mock the notificationQueue module directly (avoids singleton issues)

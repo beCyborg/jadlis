@@ -1,7 +1,7 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
 
 // Mock ioredis
-const mockRedis = { disconnect: mock(() => {}), status: "ready" };
+const mockRedis = { disconnect: mock(() => {}), connect: mock(() => Promise.resolve()), status: "ready" };
 mock.module("ioredis", () => ({ default: mock(() => mockRedis) }));
 
 // Mock bullmq
@@ -36,7 +36,8 @@ mock.module("bullmq", () => ({
   UnrecoverableError: MockUnrecoverableError,
 }));
 
-const { createNotificationWorker, QUEUE_NAME } = await import("../notificationQueue");
+const { createNotificationWorker, QUEUE_NAME, _resetQueue } = await import("../notificationQueue");
+const { resetRedisConnection } = await import("../connection");
 
 describe("QUEUE_NAME", () => {
   it("is 'jadlis-notifications'", () => {
@@ -48,6 +49,8 @@ describe("createNotificationWorker", () => {
   let mockBotApi: { sendMessage: ReturnType<typeof mock> };
 
   beforeEach(() => {
+    resetRedisConnection();
+    _resetQueue();
     mockBotApi = {
       sendMessage: mock(() => Promise.resolve()),
     };

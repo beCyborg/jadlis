@@ -87,6 +87,11 @@ export function getNotificationQueue(): Queue<NotificationJobData> {
   return queueInstance;
 }
 
+/** Resets queue singleton (for testing). */
+export function _resetQueue(): void {
+  queueInstance = null;
+}
+
 /**
  * Creates a BullMQ Worker with botApi injected (DI pattern).
  * Worker does NOT import bot.ts — avoids circular imports.

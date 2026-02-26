@@ -25,6 +25,9 @@ const {
   getUserSettingsFromRaw,
 } = await import("../scheduler");
 
+const { _resetQueue } = await import("../notificationQueue");
+const { resetRedisConnection } = await import("../connection");
+
 describe("getUserSettingsFromRaw", () => {
   it("returns defaults for null input", () => {
     const s = getUserSettingsFromRaw(null);
@@ -47,6 +50,8 @@ describe("getUserSettingsFromRaw", () => {
 
 describe("scheduleUserNotifications", () => {
   beforeEach(() => {
+    resetRedisConnection();
+    _resetQueue();
     mockQueueInstance.upsertJobScheduler.mockClear();
   });
 
@@ -97,6 +102,8 @@ describe("scheduleUserNotifications", () => {
 
 describe("cancelUserNotifications", () => {
   beforeEach(() => {
+    resetRedisConnection();
+    _resetQueue();
     mockQueueInstance.removeJobScheduler.mockClear();
   });
 
@@ -110,6 +117,8 @@ describe("cancelUserNotifications", () => {
 
 describe("reconcileAllSchedules", () => {
   beforeEach(() => {
+    resetRedisConnection();
+    _resetQueue();
     mockQueueInstance.upsertJobScheduler.mockClear();
   });
 

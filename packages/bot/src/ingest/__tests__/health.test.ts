@@ -2,6 +2,28 @@ import { describe, test, expect, beforeEach, mock } from "bun:test";
 import { Hono } from "hono";
 
 // ============================================================
+// Mock ioredis + bullmq (required by server.ts → ./queue)
+// ============================================================
+mock.module("ioredis", () => ({
+  default: mock(() => ({
+    disconnect: mock(() => {}),
+    connect: mock(() => Promise.resolve()),
+    status: "ready",
+  })),
+}));
+mock.module("bullmq", () => ({
+  Queue: mock(() => ({
+    add: mock(() => Promise.resolve()),
+    upsertJobScheduler: mock(() => Promise.resolve()),
+    removeJobScheduler: mock(() => Promise.resolve()),
+    getJobCounts: mock(() => Promise.resolve({})),
+    getJob: mock(() => Promise.resolve(null)),
+  })),
+  Worker: mock(() => ({ on: mock(() => ({})) })),
+  UnrecoverableError: class extends Error {},
+}));
+
+// ============================================================
 // Mock @tma.js/init-data-node/web (needed when importing server.ts)
 // ============================================================
 mock.module("@tma.js/init-data-node/web", () => ({
@@ -199,6 +221,7 @@ describe("POST /ingest/health", () => {
 describe("POST /cron/daily-digest", () => {
   beforeEach(() => {
     process.env.CRON_SECRET = "test-cron-secret";
+    process.env.NODE_ENV = "production";
   });
 
   test("accepts request with correct Bearer CRON_SECRET", async () => {

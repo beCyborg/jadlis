@@ -1,6 +1,26 @@
 import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test";
 import { Hono } from "hono";
 
+// Mock ioredis + bullmq (required by server.ts → ./queue)
+mock.module("ioredis", () => ({
+  default: mock(() => ({
+    disconnect: mock(() => {}),
+    connect: mock(() => Promise.resolve()),
+    status: "ready",
+  })),
+}));
+mock.module("bullmq", () => ({
+  Queue: mock(() => ({
+    add: mock(() => Promise.resolve()),
+    upsertJobScheduler: mock(() => Promise.resolve()),
+    removeJobScheduler: mock(() => Promise.resolve()),
+    getJobCounts: mock(() => Promise.resolve({})),
+    getJob: mock(() => Promise.resolve(null)),
+  })),
+  Worker: mock(() => ({ on: mock(() => ({})) })),
+  UnrecoverableError: class extends Error {},
+}));
+
 // Mock modules required by server.ts imports
 mock.module("@tma.js/init-data-node/web", () => ({
   validate: async () => {},
@@ -28,6 +48,8 @@ describe("Health endpoint", () => {
   let app: Hono;
 
   beforeEach(async () => {
+    // Set production to skip Bull Board (avoids "matcher already built" error)
+    process.env.NODE_ENV = "production";
     const { createApp } = await import("../server");
     app = createApp({ bot: null as any, supabase: mockSupabase });
   });
