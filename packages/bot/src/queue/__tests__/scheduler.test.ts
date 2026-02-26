@@ -1,12 +1,13 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
-import { _setConnectionForTest } from "../connection";
-import { _resetQueue, _setQueueForTest } from "../notificationQueue";
-import {
+
+const { _setConnectionForTest } = await import("../connection");
+const { _resetQueue, _setQueueForTest } = await import("../notificationQueue");
+const {
   scheduleUserNotifications,
   cancelUserNotifications,
   reconcileAllSchedules,
   getUserSettingsFromRaw,
-} from "../scheduler";
+} = await import("../scheduler");
 
 // Mock queue instance (injected via _setQueueForTest)
 const mockQueueInstance = {

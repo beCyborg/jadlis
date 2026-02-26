@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach } from "bun:test";
-import {
+
+const {
   embedText,
   embedBatch,
   markdownHeaderSplit,
@@ -7,7 +8,7 @@ import {
   chunkDocument,
   _resetClients,
   _setVoyageClientForTest,
-} from "../embeddings";
+} = await import("../embeddings");
 
 // ============================================================
 // Mock Voyage client
