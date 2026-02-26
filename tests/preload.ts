@@ -40,29 +40,6 @@ mock.module("bullmq", () => ({
   UnrecoverableError: class extends Error {},
 }));
 
-mock.module("@supabase/supabase-js", () => ({
-  createClient: () => ({
-    from: () => ({
-      insert: async () => ({ data: null, error: null }),
-      select: () => ({
-        eq: () => ({
-          eq: () => ({
-            order: () => ({
-              limit: () => Promise.resolve({ data: [], error: null }),
-            }),
-          }),
-          single: () => Promise.resolve({ data: null, error: null }),
-          order: () => ({
-            limit: () => Promise.resolve({ data: [], error: null }),
-          }),
-        }),
-        single: () => Promise.resolve({ data: null, error: null }),
-      }),
-      delete: () => ({
-        eq: () => ({
-          eq: () => Promise.resolve({ data: null, error: null }),
-        }),
-      }),
-    }),
-  }),
-}));
+// Note: @supabase/supabase-js is NOT mocked here — its import is safe
+// (lazy initialization). Individual test files mock it with their own
+// mock.module() calls.
