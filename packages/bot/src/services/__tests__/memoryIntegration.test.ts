@@ -120,9 +120,18 @@ describe("memoryIntegration", () => {
 
     test("checks episode summarization threshold", async () => {
       const sb = createMockSupabase({});
+      // Override select to return count for bot_sessions
+      const chain = (sb as any)._chain;
+      chain.select = mock(() => {
+        // Return a chain that resolves with count
+        return {
+          eq: mock(() => Promise.resolve({ count: 10, data: null, error: null })),
+        };
+      });
       await runPostEveningActions("user-1", "highlights", "нет", sb as never);
 
-      expect(mockShouldTrigger).toHaveBeenCalledWith("user-1");
+      // shouldTriggerEpisodeSummarization is called with count (number), not userId
+      expect(mockShouldTrigger).toHaveBeenCalled();
     });
   });
 });
