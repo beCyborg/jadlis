@@ -1,4 +1,5 @@
 export type HabitFrequency = "daily" | "weekly" | "custom";
+export type HabitStatus = "active" | "paused" | "archived";
 
 export interface Habit {
   id: string;
@@ -12,6 +13,7 @@ export interface Habit {
   streak: number;
   grace_days: number;
   need_ids: string[];
+  status: HabitStatus;
 }
 
 export interface HabitCompletion {

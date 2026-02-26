@@ -1,16 +1,26 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { describe, test, expect, beforeEach } from "bun:test";
+
+const {
+  embedText,
+  embedBatch,
+  markdownHeaderSplit,
+  recursiveSplit,
+  chunkDocument,
+  _resetClients,
+  _setVoyageClientForTest,
+} = await import("../embeddings");
 
 // ============================================================
-// Mock Voyage AI SDK
+// Mock Voyage client
 // ============================================================
 
 const MOCK_EMBEDDING = new Array(1024).fill(0).map((_, i) => i * 0.001);
 let mockEmbedCalls: any[] = [];
 let mockEmbedDynamic = false;
 
-mock.module("voyageai", () => ({
-  VoyageAIClient: class {
-    embed = async (params: any) => {
+function createMockVoyageClient() {
+  return {
+    embed: async (params: any) => {
       mockEmbedCalls.push(params);
       if (mockEmbedDynamic) {
         const batchSize = Array.isArray(params.input)
@@ -28,27 +38,9 @@ mock.module("voyageai", () => ({
         data: [{ embedding: MOCK_EMBEDDING, index: 0 }],
         usage: { totalTokens: 10 },
       };
-    };
-  },
-}));
-
-// ============================================================
-// Mock Supabase client
-// ============================================================
-
-mock.module("@supabase/supabase-js", () => ({
-  createClient: () => ({
-    from: (table: string) => ({
-      insert: async (rows: any) => ({ data: null, error: null }),
-      delete: () => ({
-        eq: (col: string, val: string) => ({
-          eq: (col2: string, val2: string) =>
-            Promise.resolve({ data: null, error: null }),
-        }),
-      }),
-    }),
-  }),
-}));
+    },
+  };
+}
 
 // ============================================================
 // Tests
@@ -58,14 +50,11 @@ describe("embedText()", () => {
   beforeEach(() => {
     mockEmbedCalls = [];
     mockEmbedDynamic = false;
-    process.env.VOYAGE_API_KEY = "test-key";
-    process.env.SUPABASE_URL = "https://test.supabase.co";
-    process.env.SUPABASE_SERVICE_KEY = "test-service-key";
+    _resetClients();
+    _setVoyageClientForTest(createMockVoyageClient());
   });
 
   test("calls Voyage API with model=voyage-3-large and outputDimension=1024", async () => {
-    const { embedText, _resetClients } = await import("../embeddings");
-    _resetClients();
     await embedText("test text", { inputType: "document" });
 
     expect(mockEmbedCalls.length).toBe(1);
@@ -74,24 +63,18 @@ describe("embedText()", () => {
   });
 
   test("uses inputType=document for indexing mode", async () => {
-    const { embedText, _resetClients } = await import("../embeddings");
-    _resetClients();
     await embedText("test text", { inputType: "document" });
 
     expect(mockEmbedCalls[0].inputType).toBe("document");
   });
 
   test("uses inputType=query for search mode", async () => {
-    const { embedText, _resetClients } = await import("../embeddings");
-    _resetClients();
     await embedText("test query", { inputType: "query" });
 
     expect(mockEmbedCalls[0].inputType).toBe("query");
   });
 
   test("returns 1024-dimensional embedding", async () => {
-    const { embedText, _resetClients } = await import("../embeddings");
-    _resetClients();
     const result = await embedText("test text", { inputType: "document" });
 
     expect(result.length).toBe(1024);
@@ -102,16 +85,12 @@ describe("embedBatch()", () => {
   beforeEach(() => {
     mockEmbedCalls = [];
     mockEmbedDynamic = true;
-    process.env.VOYAGE_API_KEY = "test-key";
-    process.env.SUPABASE_URL = "https://test.supabase.co";
-    process.env.SUPABASE_SERVICE_KEY = "test-service-key";
+    _resetClients();
+    _setVoyageClientForTest(createMockVoyageClient());
   });
 
   test("does not exceed batch size of 100 in single API call", async () => {
     const texts = Array.from({ length: 50 }, (_, i) => `text ${i}`);
-
-    const { embedBatch, _resetClients } = await import("../embeddings");
-    _resetClients();
     await embedBatch(texts, { inputType: "document" });
 
     expect(mockEmbedCalls.length).toBe(1);
@@ -124,9 +103,6 @@ describe("embedBatch()", () => {
 
   test("splits >100 texts into multiple batches and merges results", async () => {
     const texts = Array.from({ length: 150 }, (_, i) => `text ${i}`);
-
-    const { embedBatch, _resetClients } = await import("../embeddings");
-    _resetClients();
     const results = await embedBatch(texts, { inputType: "document" });
 
     expect(mockEmbedCalls.length).toBeGreaterThanOrEqual(2);
@@ -135,9 +111,7 @@ describe("embedBatch()", () => {
 });
 
 describe("markdownHeaderSplit()", () => {
-  test("preserves h1, h2, h3 hierarchy in chunk metadata", async () => {
-    const { markdownHeaderSplit } = await import("../embeddings");
-
+  test("preserves h1, h2, h3 hierarchy in chunk metadata", () => {
     const md = `# Top Level
 Some content here.
 
@@ -157,9 +131,7 @@ Even more content.`;
     expect(lastChunk.metadata.headers.h3).toBe("Sub Sub Section");
   });
 
-  test("clears lower headers when higher header encountered", async () => {
-    const { markdownHeaderSplit } = await import("../embeddings");
-
+  test("clears lower headers when higher header encountered", () => {
     const md = `# Section A
 ## A.1
 ### A.1.1
@@ -178,9 +150,7 @@ Content B`;
     expect(sectionBChunk!.metadata.headers.h3).toBeUndefined();
   });
 
-  test("includes header text in chunk content for retrieval", async () => {
-    const { markdownHeaderSplit } = await import("../embeddings");
-
+  test("includes header text in chunk content for retrieval", () => {
     const md = `# Introduction
 Some intro text.
 
@@ -189,11 +159,9 @@ Detail text here.`;
 
     const chunks = markdownHeaderSplit(md);
 
-    // First chunk should contain the h1 heading text
     expect(chunks[0].content).toContain("# Introduction");
     expect(chunks[0].content).toContain("Some intro text.");
 
-    // Second chunk should contain h1 + h2 hierarchy
     expect(chunks[1].content).toContain("# Introduction");
     expect(chunks[1].content).toContain("## Details");
     expect(chunks[1].content).toContain("Detail text here.");
@@ -201,10 +169,8 @@ Detail text here.`;
 });
 
 describe("recursiveSplit()", () => {
-  test("produces chunks of at most 512 tokens (~2048 chars)", async () => {
-    const { recursiveSplit } = await import("../embeddings");
-
-    const longContent = "Word ".repeat(600); // 3000 chars
+  test("produces chunks of at most 512 tokens (~2048 chars)", () => {
+    const longContent = "Word ".repeat(600);
 
     const input = [
       {
@@ -222,10 +188,7 @@ describe("recursiveSplit()", () => {
     expect(result.length).toBeGreaterThan(1);
   });
 
-  test("applies overlap between consecutive chunks", async () => {
-    const { recursiveSplit } = await import("../embeddings");
-
-    // Create paragraphs that force splitting
+  test("applies overlap between consecutive chunks", () => {
     const paragraphs = Array.from(
       { length: 20 },
       (_, i) => `Paragraph ${i}: ${"content ".repeat(50)}`,
@@ -242,20 +205,15 @@ describe("recursiveSplit()", () => {
     const result = recursiveSplit(input);
 
     if (result.length >= 2) {
-      // The end of chunk 0 should appear at the start of chunk 1 (overlap)
       const chunk0 = result[0].content;
       const chunk1 = result[1].content;
 
-      // Get last 100 chars of chunk 0 as overlap marker
       const overlapMarker = chunk0.slice(-100);
-      // Chunk 1 should start with content from the end of chunk 0
       expect(chunk1.includes(overlapMarker)).toBe(true);
     }
   });
 
-  test("preserves parent metadata on sub-chunks", async () => {
-    const { recursiveSplit } = await import("../embeddings");
-
+  test("preserves parent metadata on sub-chunks", () => {
     const longContent = "Word ".repeat(600);
     const input = [
       {
@@ -279,15 +237,12 @@ describe("recursiveSplit()", () => {
 });
 
 describe("chunkDocument()", () => {
-  test("returns empty array for empty document", async () => {
-    const { chunkDocument } = await import("../embeddings");
+  test("returns empty array for empty document", () => {
     const result = chunkDocument("");
     expect(result).toEqual([]);
   });
 
-  test("handles document with no markdown headers", async () => {
-    const { chunkDocument } = await import("../embeddings");
-
+  test("handles document with no markdown headers", () => {
     const content = "Just plain text without any headers.\nAnother line.";
     const result = chunkDocument(content);
 
@@ -295,9 +250,7 @@ describe("chunkDocument()", () => {
     expect(result[0].content).toContain("Just plain text");
   });
 
-  test("full pipeline: header split then recursive split", async () => {
-    const { chunkDocument } = await import("../embeddings");
-
+  test("full pipeline: header split then recursive split", () => {
     const md = `# Introduction
 Short intro.
 

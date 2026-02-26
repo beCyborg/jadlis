@@ -1,8 +1,6 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
 
-// Mock ioredis
-const mockRedis = { disconnect: mock(() => {}), status: "ready" };
-mock.module("ioredis", () => ({ default: mock(() => mockRedis) }));
+// ioredis is mocked by preload (tests/preload.ts)
 
 // Mock the notificationQueue module directly (avoids singleton issues)
 const mockQueueAdd = mock((_name: string, _data: unknown, _opts?: unknown) => Promise.resolve());

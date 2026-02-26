@@ -1,21 +1,8 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { _resetClients, _setVoyageClientForTest } from "../embeddings";
 
 // ============================================================
-// Mock embeddings module (embedText)
-// ============================================================
-
-const MOCK_EMBEDDING = new Array(1024).fill(0).map((_, i) => i * 0.001);
-let mockEmbedTextCalls: any[] = [];
-
-mock.module("../embeddings", () => ({
-  embedText: async (text: string, options: any) => {
-    mockEmbedTextCalls.push({ text, options });
-    return MOCK_EMBEDDING;
-  },
-}));
-
-// ============================================================
-// Mock Supabase client
+// Mock Supabase (for search.ts's getSupabase())
 // ============================================================
 
 let mockRpcArgs: any[] = [];
@@ -31,12 +18,31 @@ mock.module("@supabase/supabase-js", () => ({
 }));
 
 // ============================================================
+// Mock Voyage client (via DI, not mock.module)
+// ============================================================
+
+const MOCK_EMBEDDING = new Array(1024).fill(0).map((_, i) => i * 0.001);
+let mockVoyageEmbedCalls: any[] = [];
+
+function createMockVoyageClient() {
+  return {
+    embed: async (params: any) => {
+      mockVoyageEmbedCalls.push(params);
+      return {
+        data: [{ embedding: MOCK_EMBEDDING, index: 0 }],
+        usage: { totalTokens: 10 },
+      };
+    },
+  };
+}
+
+// ============================================================
 // Tests
 // ============================================================
 
 describe("semanticSearch()", () => {
   beforeEach(() => {
-    mockEmbedTextCalls = [];
+    mockVoyageEmbedCalls = [];
     mockRpcArgs = [];
     mockRpcResult = {
       data: [
@@ -55,6 +61,8 @@ describe("semanticSearch()", () => {
       ],
       error: null,
     };
+    _resetClients();
+    _setVoyageClientForTest(createMockVoyageClient());
     process.env.VOYAGE_API_KEY = "test-key";
     process.env.SUPABASE_URL = "https://test.supabase.co";
     process.env.SUPABASE_SERVICE_KEY = "test-service-key";
@@ -64,8 +72,8 @@ describe("semanticSearch()", () => {
     const { semanticSearch } = await import("../search");
     await semanticSearch("test query", { userId: "user-1" });
 
-    expect(mockEmbedTextCalls.length).toBe(1);
-    expect(mockEmbedTextCalls[0].options.inputType).toBe("query");
+    expect(mockVoyageEmbedCalls.length).toBe(1);
+    expect(mockVoyageEmbedCalls[0].inputType).toBe("query");
   });
 
   test("passes sourceTypes filter to search_documents RPC", async () => {

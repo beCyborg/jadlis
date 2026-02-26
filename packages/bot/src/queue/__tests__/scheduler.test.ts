@@ -1,10 +1,6 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test";
 
-// Mock ioredis
-const mockRedis = { disconnect: mock(() => {}), connect: mock(() => Promise.resolve()), status: "ready" };
-mock.module("ioredis", () => ({ default: mock(() => mockRedis) }));
-
-// Mock bullmq Queue
+// Mock queue instance — mock.module to intercept getNotificationQueue globally
 const mockQueueInstance = {
   add: mock(() => Promise.resolve()),
   upsertJobScheduler: mock(() => Promise.resolve()),
@@ -12,10 +8,13 @@ const mockQueueInstance = {
   getJobCounts: mock(() => Promise.resolve({})),
   getJob: mock(() => Promise.resolve(null)),
 };
-mock.module("bullmq", () => ({
-  Queue: mock(() => mockQueueInstance),
-  Worker: mock(() => ({ on: mock(() => ({})) })),
-  UnrecoverableError: class extends Error {},
+
+mock.module("../notificationQueue", () => ({
+  QUEUE_NAME: "jadlis-notifications",
+  getNotificationQueue: () => mockQueueInstance,
+  createNotificationQueue: () => mockQueueInstance,
+  _resetQueue: () => {},
+  _setQueueForTest: () => {},
 }));
 
 const {
@@ -80,7 +79,6 @@ describe("scheduleUserNotifications", () => {
   });
 
   it("updates existing jobs (upsert, not duplicate)", async () => {
-    // Call twice for same user
     const settings = {
       timezone: "UTC",
       morning_neuro_charge_time: "08:00",
@@ -90,7 +88,6 @@ describe("scheduleUserNotifications", () => {
     await scheduleUserNotifications(789, 789, settings);
     await scheduleUserNotifications(789, 789, { ...settings, morning_neuro_charge_time: "09:00" });
 
-    // All calls use upsertJobScheduler (idempotent)
     expect(mockQueueInstance.upsertJobScheduler).toHaveBeenCalledTimes(4);
   });
 });
@@ -133,7 +130,6 @@ describe("reconcileAllSchedules", () => {
     };
 
     await reconcileAllSchedules(mockSupabase as never);
-    // 2 users × 2 schedulers each = 4 calls
     expect(mockQueueInstance.upsertJobScheduler).toHaveBeenCalledTimes(4);
   });
 
@@ -156,7 +152,6 @@ describe("reconcileAllSchedules", () => {
     };
 
     await reconcileAllSchedules(mockSupabase as never);
-    // 1 user × 2 schedulers = 2 calls
     expect(mockQueueInstance.upsertJobScheduler).toHaveBeenCalledTimes(2);
   });
 
@@ -178,7 +173,6 @@ describe("reconcileAllSchedules", () => {
 
     await reconcileAllSchedules(mockSupabase as never);
     await reconcileAllSchedules(mockSupabase as never);
-    // Uses upsertJobScheduler → idempotent
     expect(mockQueueInstance.upsertJobScheduler).toHaveBeenCalledTimes(4);
   });
 });

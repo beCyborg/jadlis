@@ -236,11 +236,40 @@ async function withRetry<T>(
 // Public API
 // ============================================================
 
+/**
+ * Send a message with tool definitions and return the raw response.
+ * Used for structured AI outputs (zone determination, etc.).
+ */
+export async function createMessageWithTools(
+  userMessage: string,
+  options: {
+    tools: Anthropic.Messages.Tool[];
+    tool_choice?: Anthropic.Messages.ToolChoice;
+    maxTokens?: number;
+    dynamicContext?: string;
+    system?: string;
+  },
+): Promise<Anthropic.Messages.Message> {
+  return withRetry(() =>
+    anthropic.messages.create({
+      model: MODEL,
+      max_tokens: options.maxTokens ?? 1024,
+      system: options.system
+        ? [{ type: "text", text: options.system }]
+        : buildSystemBlocks(options.dynamicContext),
+      messages: [{ role: "user", content: userMessage }],
+      tools: options.tools,
+      tool_choice: options.tool_choice,
+    }),
+  );
+}
+
 export async function createMessage(
   userMessage: string,
   options?: {
     maxTokens?: number;
     dynamicContext?: string;
+    system?: string;
   },
 ): Promise<string> {
   try {
@@ -248,7 +277,9 @@ export async function createMessage(
       anthropic.messages.create({
         model: MODEL,
         max_tokens: options?.maxTokens ?? 4096,
-        system: buildSystemBlocks(options?.dynamicContext),
+        system: options?.system
+          ? [{ type: "text" as const, text: options.system }]
+          : buildSystemBlocks(options?.dynamicContext),
         messages: [{ role: "user", content: userMessage }],
       }),
     );

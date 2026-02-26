@@ -1,5 +1,4 @@
-import { VoyageAIClient } from "voyageai";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ============================================================
 // Constants
@@ -36,17 +35,20 @@ export interface DocumentChunk {
 }
 
 // ============================================================
-// Clients (singletons)
+// Clients (singletons, lazy-loaded to avoid import-time side effects)
 // ============================================================
 
-let _voyageClient: VoyageAIClient | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _voyageClient: any = null;
 let _supabase: SupabaseClient | null = null;
 
-function getVoyageClient(): VoyageAIClient {
+function getVoyageClient() {
   if (!_voyageClient) {
     if (!process.env.VOYAGE_API_KEY) {
       throw new Error("VOYAGE_API_KEY environment variable is required");
     }
+    // Lazy require to avoid top-level import that breaks Bun test runner
+    const { VoyageAIClient } = require("voyageai");
     _voyageClient = new VoyageAIClient({
       apiKey: process.env.VOYAGE_API_KEY,
     });
@@ -61,18 +63,25 @@ function getSupabase(): SupabaseClient {
         "SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables are required",
       );
     }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createClient } = require("@supabase/supabase-js") as typeof import("@supabase/supabase-js");
     _supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_KEY,
     );
   }
-  return _supabase;
+  return _supabase!;
 }
 
 /** Reset cached clients — used by tests */
 export function _resetClients(): void {
   _voyageClient = null;
   _supabase = null;
+}
+
+/** @internal Test-only: inject mock Voyage client */
+export function _setVoyageClientForTest(client: unknown): void {
+  _voyageClient = client;
 }
 
 // ============================================================
@@ -129,8 +138,8 @@ export async function embedBatch(
     });
 
     const embeddings = (response.data ?? [])
-      .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-      .map((item) => {
+      .sort((a: { index?: number }, b: { index?: number }) => (a.index ?? 0) - (b.index ?? 0))
+      .map((item: { embedding?: number[] }) => {
         if (!item.embedding) {
           throw new Error("Voyage API returned empty embedding in batch");
         }

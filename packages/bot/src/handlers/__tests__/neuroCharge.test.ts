@@ -10,15 +10,27 @@ mock.module("../../queue/reminders", () => ({
 }));
 
 const mockIsMorningCompleted = mock(() => Promise.resolve(false));
+const mockIsEveningCompleted = mock(() => Promise.resolve(false));
+const mockGetOrCreateTodayRecord = mock(() => Promise.resolve(null));
+const mockUpdateDayField = mock(() => Promise.resolve());
+const mockAppendHighlight = mock(() => Promise.resolve());
 mock.module("../../services/dayService", () => ({
   isMorningCompleted: mockIsMorningCompleted,
+  isEveningCompleted: mockIsEveningCompleted,
+  getOrCreateTodayRecord: mockGetOrCreateTodayRecord,
+  updateDayField: mockUpdateDayField,
+  appendHighlight: mockAppendHighlight,
 }));
 
 const mockFindOrCreateHabit = mock(() => Promise.resolve("habit-id-123"));
 const mockLogHabitCompletion = mock(() => Promise.resolve());
+const mockGetTodayHabits = mock(() => Promise.resolve([]));
+const mockGetStreakInfo = mock(() => Promise.resolve({ streaks: {}, longestStreak: 0 }));
 mock.module("../../services/habitService", () => ({
   findOrCreateHabit: mockFindOrCreateHabit,
   logHabitCompletion: mockLogHabitCompletion,
+  getTodayHabits: mockGetTodayHabits,
+  getStreakInfo: mockGetStreakInfo,
 }));
 
 mock.module("../../db", () => ({

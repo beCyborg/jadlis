@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BotContext } from "../bot";
+import { startOnboarding } from "./onboarding";
 
 export function createStartHandler(supabase: SupabaseClient) {
   return async function handleStart(ctx: BotContext): Promise<void> {
@@ -30,8 +31,9 @@ export function createStartHandler(supabase: SupabaseClient) {
     });
 
     await ctx.reply(
-      "Привет! Я Jadlis — твой персональный AI-ассистент для улучшения жизни.\n\n" +
-        "Напиши /help чтобы посмотреть доступные команды.",
+      "Привет! Я Jadlis — твой персональный AI-ассистент для улучшения жизни.",
     );
+
+    await startOnboarding(ctx);
   };
 }

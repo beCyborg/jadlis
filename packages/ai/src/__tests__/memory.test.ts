@@ -1,11 +1,12 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { _resetClients, _setVoyageClientForTest } from "../embeddings";
 
 // ============================================================
 // Mock tracking state
 // ============================================================
 
 const MOCK_EMBEDDING = new Array(1024).fill(0).map((_, i) => i * 0.001);
-let mockEmbedTextCalls: any[] = [];
+let mockVoyageEmbedCalls: any[] = [];
 let mockSemanticSearchCalls: any[] = [];
 let mockSemanticSearchResult: any[] = [];
 let mockAnthropicCalls: any[] = [];
@@ -18,15 +19,20 @@ let supabaseOps: any[] = [];
 let supabaseResults: Record<string, any> = {};
 
 // ============================================================
-// Mock embeddings module
+// Mock Voyage client (via DI instead of mock.module for embeddings)
 // ============================================================
 
-mock.module("../embeddings", () => ({
-  embedText: async (text: string, options: any) => {
-    mockEmbedTextCalls.push({ text, options });
-    return MOCK_EMBEDDING;
-  },
-}));
+function createMockVoyageClient() {
+  return {
+    embed: async (params: any) => {
+      mockVoyageEmbedCalls.push(params);
+      return {
+        data: [{ embedding: MOCK_EMBEDDING, index: 0 }],
+        usage: { totalTokens: 10 },
+      };
+    },
+  };
+}
 
 // ============================================================
 // Mock search module
@@ -140,7 +146,7 @@ mock.module("@supabase/supabase-js", () => ({
 // ============================================================
 
 beforeEach(() => {
-  mockEmbedTextCalls = [];
+  mockVoyageEmbedCalls = [];
   mockSemanticSearchCalls = [];
   mockSemanticSearchResult = [];
   mockAnthropicCalls = [];
@@ -149,6 +155,8 @@ beforeEach(() => {
   };
   supabaseOps = [];
   supabaseResults = {};
+  _resetClients();
+  _setVoyageClientForTest(createMockVoyageClient());
   process.env.SUPABASE_URL = "https://test.supabase.co";
   process.env.SUPABASE_SERVICE_KEY = "test-service-key";
   process.env.ANTHROPIC_API_KEY = "test-api-key";
@@ -224,11 +232,14 @@ describe("writeFact()", () => {
     const { writeFact } = await import("../memory");
     await writeFact("user-1", "city", "Tbilisi", { category: "context" });
 
-    // Should have called embedText
-    expect(mockEmbedTextCalls.length).toBeGreaterThanOrEqual(1);
-    const embedCall = mockEmbedTextCalls.find((c) => c.text.includes("city") && c.text.includes("Tbilisi"));
+    // Should have called Voyage embed via DI mock
+    expect(mockVoyageEmbedCalls.length).toBeGreaterThanOrEqual(1);
+    const embedCall = mockVoyageEmbedCalls.find((c: any) => {
+      const input = Array.isArray(c.input) ? c.input.join(" ") : c.input;
+      return input.includes("city") && input.includes("Tbilisi");
+    });
     expect(embedCall).toBeDefined();
-    expect(embedCall!.options.inputType).toBe("document");
+    expect(embedCall!.inputType).toBe("document");
 
     // Should delete existing vector then insert new one (delete+insert strategy)
     const deleteDocOp = supabaseOps.find((o) => o.table === "jadlis_documents" && o.operation === "delete");
@@ -476,8 +487,8 @@ describe("summarizeAndStoreEpisode()", () => {
     const { summarizeAndStoreEpisode } = await import("../memory");
     await summarizeAndStoreEpisode("user-1", messages, { chatId: "chat-1", messageCount: 10 });
 
-    // Should embed the summary
-    expect(mockEmbedTextCalls.length).toBeGreaterThanOrEqual(1);
+    // Should embed the summary via Voyage mock
+    expect(mockVoyageEmbedCalls.length).toBeGreaterThanOrEqual(1);
 
     // Should insert into jadlis_documents
     const insertOp = supabaseOps.find((o) => o.table === "jadlis_documents" && o.operation === "insert");
