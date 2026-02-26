@@ -1,10 +1,30 @@
 /**
- * Bun test preload — placeholder.
+ * Bun test preload — registers module mocks BEFORE any test file loads.
  *
- * Individual test files mock their own dependencies (ioredis, bullmq,
- * voyageai, @supabase/supabase-js) via mock.module() or DI setters.
+ * Mocked: ioredis — prevents real Redis connections. Connection.ts creates
+ * real IORedis instances at getRedisConnection() call time. Without this mock,
+ * open handles prevent process exit.
  *
- * No global mocks needed because:
- * - connection.ts / notificationQueue.ts use lazy initialization
- * - embeddings.ts uses lazy require() for voyageai / @supabase/supabase-js
+ * NOT mocked here:
+ * - bullmq — individual tests mock it via mock.module (Queue/Worker are lazy)
+ * - voyageai, @supabase/supabase-js — lazy require() in embeddings.ts
  */
+import { mock } from "bun:test";
+
+mock.module("ioredis", () => ({
+  default: class MockIORedis {
+    _url: string;
+    _opts: unknown;
+    status = "ready";
+
+    constructor(url?: string, opts?: unknown) {
+      this._url = url ?? "";
+      this._opts = opts ?? {};
+    }
+
+    disconnect() {}
+    connect() {
+      return Promise.resolve();
+    }
+  },
+}));
